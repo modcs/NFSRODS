@@ -21,7 +21,18 @@ It does not support:
 
 ## Examples of utilization
 
+The figure bellow depicts the examples through three commands: mkdir, for creating a folder; rm, for removing a folder; and, mv for renaming also a folder:
+
+![Examples](https://raw.githubusercontent.com/modcs/NFSRODS/master/images/examples.png)
+
+To show the creating process example (Figure (a)), we first executed the ils command to list the data content of our iRODS repository, which corresponds to exemp1, exemp3, exemp4 and exemp8 folders. Therefore, after executing the mkdir exemp0, we also needed to list the new content of our repository on the iRODS server to show that the exemp0 folder was created.
+
+
+Similarly to the previous example, to show the remove directory operation (Figure (b)), we first executed the ils command to list the data content of our iRODS repository, which corresponds to exemp0, exemp1, exemp3, exemp4 and exemp8 folders. Therefore, after executing the rm -R exemp8 command, we also needed to list the new content of our repository on the iRODS server to show that the exemp8 folder was deleted.
+
+Finally, the last example shows the rename operation (Figure (c)). Again, we first executed the ils command to list the data content of our iRODS repository, which corresponds to exemp0, exemp1, exemp3 and exemp4 folders. Therefore, after executing the mv exemp4 exemp5 command, we also needed to list the new content of our repository on the iRODS server to show that the exemp has been renamed for exemp5 folder.
+
 ## References
 
--- [1] - iRODS. The integrated rule-oriented data system (irods). http://irods.org/
--- [2] - UNFS. User-space NFSv3 Server. http://unfs3.sourceforge.net
+- [1] - iRODS. The integrated rule-oriented data system (irods). http://irods.org/
+- [2] - UNFS. User-space NFSv3 Server. http://unfs3.sourceforge.net
