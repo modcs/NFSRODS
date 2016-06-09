@@ -1,7 +1,11 @@
-
-/*
- * UNFS3 server framework
- * Originally generated using rpcgen
+/* NFS-RODS: A Tool for Accessing iRODS Repositories
+ * via the NFS Protocol
+ * (C) 2016, Danilo Mendonça, Vandi Alves, Iure Fe,
+ * Aleciano Lobo Junior, Francisco Airton Silva,
+ * Gustavo Callou and Paulo Maciel <prmm@cin.ufpe.br>
+ *
+ * Original Copyright notice
+ * UNFS3 NFS protocol procedures
  * Portions (C) 2004, Pascal Schmidt
  * see file LICENSE for license details
  */
@@ -49,6 +53,8 @@
 #include "daemon.h"
 #include "backend.h"
 #include "Config/exports.h"
+#include "utils/json.h"
+#include "utils/utils.h"
 
 #ifndef SIG_PF
 #define SIG_PF void(*)(int)
@@ -868,34 +874,7 @@ void toArray2(char newString[],char *value){
  */
 int main(int argc, char **argv)
 {
-
-
-
-
-
-    if(0){
-        printf("start \n");
-
-        //char * path ="/tempZone/home/joker/copy.txt";
-
-        rcComm_t* comm = rodsConnectProxy("joker", "tempZone");
-
-        //rcComm_t* comm = rodsConnect();
-
-        rodsLogin(comm);
-
-
-        char* path= "/tempZone/home/joker/log.txt";
-
-        printf("mode %d\n",fileMode(path,comm));
-
-
-
-        printf("end\n");
-
-
-        return 0;
-    }
+    configureEnv();
 
     register SVCXPRT *tcptransp = NULL, *udptransp = NULL;
     pid_t pid = 0;

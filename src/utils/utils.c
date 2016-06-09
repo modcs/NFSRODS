@@ -1,13 +1,25 @@
-﻿#include <stdio.h>
+﻿/* NFS-RODS: A Tool for Accessing iRODS Repositories
+ * via the NFS Protocol
+ * (C) 2016, Danilo Mendonça, Vandi Alves, Iure Fe,
+ * Aleciano Lobo Junior, Francisco Airton Silva,
+ * Gustavo Callou and Paulo Maciel <prmm@cin.ufpe.br>
+ */
+
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "utils.h"
 #include <syslog.h>
 #include <sys/stat.h>
 #include <limits.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <dirent.h>
+#include <pwd.h>
+#include "unistd.h";
+#include "nfs.h"
+#include "utils.h"
+#include "json.h"
+
 /*
  *
  * NFS-RODS Project
@@ -15,6 +27,7 @@
  * Utility class for assisting operations in nfs.c class.
  *
  */
+
 
 /**
  * @brief debug Saves log information at the “/var/log/syslog” location, using the header word: "NFS-RODS-DAEMON".
@@ -27,6 +40,7 @@ void debug(char * message, char * string){
     syslog (LOG_ERR, message, string);
     closelog ();
 }
+
 
 /**
  * @brief concat Concat two strings returning the combined string.
@@ -47,10 +61,8 @@ char* concat(char *s1, char *s2)
 }
 
 
-
-
 /**
- * @brief concat Concat two strings returning the combined string.
+ * @brief concatProxy Concat two strings returning the combined string.
  * @param s1
  * @param s2
  * @return
@@ -58,172 +70,44 @@ char* concat(char *s1, char *s2)
 char* concatProxy(char *zone, char *userName, char *path)
 {
     debug("concatProxy START ","");
-    //char *result = malloc(strlen(userName)+strlen(path)+strlen(zone)+1);//+1 for the zero-terminator
+
     char *result = malloc(3000*sizeof(char));//+1 for the zero-terminator
+
     if(result == NULL){
         debug("Error in MALLOC of Concat function from 'utils.c'",NULL);
     }
+
     strcpy(result, zone);
     strcat(result, "/home/");
     strcat(result, userName);
     strcat(result, path);
 
     debug("concatProxy END ","");
+
     return result;
 }
 
 
-
-char *LDAPHOST="armazenamento";
-char *LDAP_DN = "cn=admin, dc=irods, dc=example, dc=org";
-char *USERS_LDAP_DN = "OU=users,DC=irods,DC=example,DC=org";
-char *LDAPPSS = "admin";
-int  LDAPVERSION = LDAP_VERSION3;
-int LDAPPORT=LDAP_PORT;
-
 /**
- * @brief getLdapConnection
- * @param ldap
- * @return
- */
-int getLdapConnection(LDAP **ldap){
-
-
-    //LDAP *ldap;
-    int result;
-
-    if ( ( *ldap = ldap_init( LDAPHOST, LDAPPORT ) ) == NULL ) {
-       debug( "ldap_init error","" );
-       return( -1 );
-    }
-
-    /* The LDAP_OPT_PROTOCOL_VERSION session preference specifies the client */
-    /* is an LDAPv3 client. */
-    result = ldap_set_option(*ldap, LDAP_OPT_PROTOCOL_VERSION, &LDAPVERSION);
-
-    if ( result != LDAP_OPT_SUCCESS ) {
-        debug( "ldap_init error","" );
-        return( -1 );
-    } else {
-      debug("Set LDAPv3 client version.","");
-    }
-
-
-    /* Attempt authentication. */
-    if ( ldap_simple_bind_s( *ldap, LDAP_DN, LDAPPSS ) != LDAP_SUCCESS ) {
-       debug( "ldap_simple_bind_s error","" );
-       return( -1 );
-    }
-
-
-    return 0;
-
-
-}
-
-/**
- * @brief getLdapName
+ * @brief getUserName
  * @param id
  * @param name
  * @return
  */
-int getLdapName(int id,char *name){
+int getUserName(int uid,char *name){
 
-    LDAP *ldap=NULL;
-
-    int r = getLdapConnection(&ldap);
-
-
-    if(r!=0){
-        debug("error Ldap Connection","");
-        return -1;
+    if(!NFS_RODS_PRIVATE_COLL){
+        return 1;
     }
 
+    struct passwd *pw = getpwuid(uid);
 
-    int result;
-
-   // The search scope must be either LDAP_SCOPE_SUBTREE or LDAP_SCOPE_ONELEVEL
-   int  scope          = LDAP_SCOPE_SUBTREE;
-   // The search filter, "(objectClass=*)" returns everything. Windows can return
-   // 1000 objects in one search. Otherwise, "Size limit exceeded" is returned.
-   char *baseFilter = "(&(objectClass=*)(uidNumber=%d))";
-   char *filter=  malloc( 200*(sizeof (char)));
-   sprintf(filter, baseFilter, id);
-    //char *filter = "(&(objectClass=*)(uidNumber=1001))";
-    // The attribute list to be returned, use {NULL} for getting all attributes
-   char *attrs[]       = {"cn"};
-   // Specify if only attribute types (1) or both type and value (0) are returned
-   int  attrsonly      = 0;
-   // entries_found holds the number of objects found for the LDAP search
-   int  entries_found  = 0;
-   // dn holds the DN name string of the object(s) returned by the search
-   char *dn            = "";
-   // attribute holds the name of the object(s) attributes returned
-   char *attribute     = "";
-   // values is  array to hold the attribute values of the object(s) attributes
-   char **values;
-   // i is the for loop variable to cycle through the values[i]
-   int  i              = 0;
-
-   LDAPMessage *answer, *entry;
-   BerElement *ber;
-
-
-
- /* STEP 3: Do the LDAP search. */
- result = ldap_search_s(ldap, USERS_LDAP_DN, scope, filter,
-                        attrs, attrsonly, &answer);
-
-
- if ( result != LDAP_SUCCESS ) {
-   debug("Search Ldap Error","");
-   return( -1 );
- }
-
- /* Return the number of objects found during the search */
- entries_found = ldap_count_entries(ldap, answer);
- if ( entries_found == 0 ) {
-   debug("Search Ldap Error non foud users","");
-   return( -1 );
- }
-
- /* cycle through all objects returned with our search */
- for ( entry = ldap_first_entry(ldap, answer);
-       entry != NULL;
-       entry = ldap_next_entry(ldap, entry)) {
-
-   /* Print the DN string of the object */
-   dn = ldap_get_dn(ldap, entry);
-
-
-   // cycle through all returned attributes
-   for ( attribute = ldap_first_attribute(ldap, entry, &ber);
-         attribute != NULL;
-         attribute = ldap_next_attribute(ldap, entry, ber)) {
-
-     /* Print the attribute name */
-
-     if ((values = ldap_get_values(ldap, entry, attribute)) != NULL) {
-
-       /* cycle through all values returned for this attribute */
-       for (i = 0; values[i] != NULL; i++) {
-
-           strcpy(name, trim(values[i]));
-         /* print each value of a attribute here */
-
-
-       }
-       ldap_value_free(values);
-     }
-   }
-   ldap_memfree(dn);
- }
-
- ldap_msgfree(answer);
- ldap_unbind(ldap);
-
-
-
+    if (pw)
+    {
+        sprintf(name,"%s",pw->pw_name);
+    }else{
+        return -1;
+    }
     return 0;
 }
 
@@ -236,24 +120,25 @@ int getLdapName(int id,char *name){
  * @param dir The directory to be created
  */
 void rec_mkdir(const char *dir) {
-        char tmp[256];
-        char *p = NULL;
-        size_t len;
+    char tmp[256];
+    char *p = NULL;
+    size_t len;
 
-        snprintf(tmp, sizeof(tmp),"%s",dir);
-        len = strlen(tmp);
-        if(tmp[len - 1] == '/')
-                tmp[len - 1] = 0;
-        for(p = tmp + 1; *p; p++)
-                if(*p == '/') {
-                        *p = 0;
-                        debug("READDIR create %s",tmp);
-                        mkdir(tmp, S_IRWXU);
-                        *p = '/';
-                }
-        mkdir(tmp, S_IRWXU);
-        debug("READDIR create %s",tmp);
+    snprintf(tmp, sizeof(tmp),"%s",dir);
+    len = strlen(tmp);
+    if(tmp[len - 1] == '/')
+        tmp[len - 1] = 0;
+    for(p = tmp + 1; *p; p++)
+        if(*p == '/') {
+            *p = 0;
+            debug("READDIR create %s",tmp);
+            mkdir(tmp, S_IRWXU);
+            *p = '/';
+        }
+    mkdir(tmp, S_IRWXU);
+    debug("READDIR create %s",tmp);
 }
+
 
 /**
  * @brief trim Remove extra blank spaces in the start or end of a string
@@ -302,27 +187,27 @@ char * trim(char *string)
  */
 char* substring(char *string, int position, int length)
 {
-   char *pointer;
-   int c;
+    char *pointer;
+    int c;
+    pointer = malloc(length+1);
 
-   pointer = malloc(length+1);
+    if (pointer == NULL)
+    {
+        printf("Unable to allocate memory.\n");
+        exit(1);
+    }
 
-   if (pointer == NULL)
-   {
-      printf("Unable to allocate memory.\n");
-      exit(1);
-   }
+    for (c = 0 ; c < length ; c++)
+    {
+        *(pointer+c) = *(string+position-1);
+        string++;
+    }
 
-   for (c = 0 ; c < length ; c++)
-   {
-      *(pointer+c) = *(string+position-1);
-      string++;
-   }
+    *(pointer+c) = '\0';
 
-   *(pointer+c) = '\0';
-
-   return pointer;
+    return pointer;
 }
+
 
 /**
  * @brief toArray Copy the contents of a pointer to an array
@@ -338,6 +223,7 @@ void toArray(char newString[],char *value){
     }
     newString[var]='\0';
 }
+
 
 /**
  * @brief removedirectoryrecursively Performs a "rm -R" operation in the local filesystem
@@ -368,7 +254,6 @@ int removedirectoryrecursively(const char *dirname)
              * quite a dangerous thing to do, and this program is not very
              * well tested, we are just printing as if we are deleting.
              */
-            //printf("Deleting: %s\n", path);
             remove(path);
             /*
              * When you are finished testing this and feel you are ready to do the real
@@ -385,11 +270,92 @@ int removedirectoryrecursively(const char *dirname)
      * Now the directory is emtpy, finally delete the directory itself. (Just
      * printing here, see above)
      */
-    //printf("Deleting: %s\n", dirname);
     rmdir(dirname);
 
     return 1;
 }
 
 
+char* readFile(char * fileName, long * fileSize){
+    char *buffer;
+    FILE *fh = fopen(fileName, "rb");
+    if ( fh != NULL )
+    {
+        fseek(fh, 0L, SEEK_END);
+        long s = ftell(fh);
+        *fileSize = s;
+        rewind(fh);
+        buffer = malloc(s);
+        if ( buffer != NULL )
+        {
+            fread(buffer, s, 1, fh);
+            fclose(fh); fh = NULL;
+        }
+        if (fh != NULL) fclose(fh);
+    }
 
+    return buffer;
+}
+
+
+void processJSON(json_value* value){
+    int length = value->u.object.length;
+
+    int i=0;
+    for(i = 0; i < length; i++){
+        char* string = value->u.object.values[i].name;
+
+        if (strcmp(string, "irods_zone") == 0) {
+
+            ZONE =  value->u.object.values[i].value->u.string.ptr;
+
+        } else if (strcmp(string, "use_private_collection") == 0) {
+
+            int result = value->u.object.values[i].value->u.boolean;
+
+            if(result==1)
+                NFS_RODS_PRIVATE_COLL = TRUE;
+            else
+                NFS_RODS_PRIVATE_COLL = FALSE;
+        }
+    }
+}
+
+
+const char *getConfUserName()
+{
+    uid_t uid = geteuid();
+    struct passwd *pw = getpwuid(uid);
+    if (pw)
+    {
+        return pw->pw_name;
+    }
+
+    return "";
+}
+
+
+void configureEnv(){
+    char * home = "/home/";
+    char * username = getConfUserName();
+    char * dir = concat(home, username);
+    char * file = concat(dir, "/.nfsrods-config.json");
+
+    if( access( file, F_OK ) == -1 ) {
+
+        NFS_RODS_PRIVATE_COLL = FALSE;
+
+        return;
+
+    }else{
+
+        long fileSize;
+        char* contents = readFile(file, &fileSize);
+        json_char* json = (json_char*)contents;
+        json_value* value = json_parse(json,fileSize);
+        processJSON(value);
+        debug("Configure NFS_RODS_PRIVATE_COLL_ACTIVATED %d",NFS_RODS_PRIVATE_COLL);
+        debug("Configure Zone %s",ZONE);
+    }
+
+}

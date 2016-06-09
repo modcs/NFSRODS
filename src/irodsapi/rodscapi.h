@@ -1,3 +1,10 @@
+/* NFS-RODS: A Tool for Accessing iRODS Repositories
+ * via the NFS Protocol
+ * (C) 2016, Danilo Mendonça, Vandi Alves, Iure Fe,
+ * Aleciano Lobo Junior, Francisco Airton Silva,
+ * Gustavo Callou and Paulo Maciel <prmm@cin.ufpe.br>
+ */
+
 #ifndef RODSCAPI_H
 #define RODSCAPI_H
 
@@ -28,6 +35,7 @@ typedef struct
     char **resultValues; // Values in where SQL
 }OutputQuery;
 
+int isPublic();
 rcComm_t *  rodsConnect();
 rcComm_t* rodsConnectProxy(char * clientUserName,char *zone);
 int rodsLogin(rcComm_t * rodsCommPtr );
@@ -48,10 +56,11 @@ pre_op_attr get_pre_cached_irods(char *path,char** owner);
 int changeAttr(char *path,char *userName,char * accessLevel,rcComm_t *conn);
 int getFileInfo(char *path, rcComm_t * conn, rodsObjStat_t **rodsObjStatOut);
 int listCollection(char *remoteFolder, char *localFolder, rcComm_t *rodsCommPtr);
-rcComm_t* rodsConnectLDAP(int uidProxy);
+rcComm_t* rodsConnecUser(int uidProxy);
 rodsLong_t fileSize(char * objPath, rcComm_t * conn );
 char* getRodsPath(int uidProxy,char* path);
 int fileMode(char * path, rcComm_t * comm );
+
 
 #endif // RODSCAPI_H
 

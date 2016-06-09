@@ -1,3 +1,10 @@
+/* NFS-RODS: A Tool for Accessing iRODS Repositories
+ * via the NFS Protocol
+ * (C) 2016, Danilo Mendonça, Vandi Alves, Iure Fe,
+ * Aleciano Lobo Junior, Francisco Airton Silva,
+ * Gustavo Callou and Paulo Maciel <prmm@cin.ufpe.br>
+ */
+
 #include "irodsapi/rodscapi.h"
 #include <stdio.h>
 #include <sys/stat.h>
@@ -5,9 +12,6 @@
 #include "utils/rodscapi_utils.h"
 #include "utils/utils.h"
 #include "nfs.h"
-
-
-
 
 
 /**
@@ -42,7 +46,8 @@ int getatt_aux(nfs_fh3 fh, fattr3 fat, rcComm_t* comm, char *path, int *size)
     {
         *size = rodsObjStatOut->objSize;
 
-        /*It is necessary to change the attributes locally (executing a SETATT) to avoid the NFS Stale File Handle error.*/
+        /*It is necessary to change the attributes locally (executing a SETATT)
+         *  to avoid the NFS Stale File Handle error.*/
         set_aux(fh, fat, path, size);
 
     }
@@ -50,6 +55,7 @@ int getatt_aux(nfs_fh3 fh, fattr3 fat, rcComm_t* comm, char *path, int *size)
 
     freeRodsObjStat (rodsObjStatOut);
 }
+
 
 void set_aux(nfs_fh3 fh, fattr3 fat, char *path, int size)
 {
@@ -63,6 +69,7 @@ void set_aux(nfs_fh3 fh, fattr3 fat, char *path, int size)
     set_attr(path, fh, s);
 }
 
+
 /**
  * @brief executeQuery Based on a full_path, a query is executed intending to fill the OutputQuery object with the database attributes desired.
  * @param full_path The path for a file or object
@@ -71,17 +78,6 @@ void set_aux(nfs_fh3 fh, fattr3 fat, char *path, int size)
  * @param selected_attributes The respective database attributes to be fetched
  * @param outputQuery The resulted values are filled under this variable
  * @return
- * Example of Use:
- *    rcComm_t* comm = rodsConnect();
-    int i = rodsLogin(comm);
-    OutputQuery *outputQuery;
-    char full_path[]= "/home/airton/emc/folderserver/log.txt";
-
-    int attributes_number = 2;
-    int *selected_attributes = (int *) malloc(attributes_number * sizeof(int));
-    selected_attributes[0] = 407;//size
-    selected_attributes[1] = 703;//user_id
-    executeQuery(full_path, comm, attributes_number, selected_attributes, outputQuery);
  */
 int executeQuery(char full_path[],  rcComm_t* comm, int attributes_number, int selected_attributes[], OutputQuery outputQuery){
 
@@ -99,7 +95,6 @@ int executeQuery(char full_path[],  rcComm_t* comm, int attributes_number, int s
 
     char **columnValues = (char **) malloc(300*inputQuery.condSize* sizeof(char));
 
-
     char* substr = (char*) malloc(strlen(full_path));
     strncpy(substr,full_path + (fileNameLastIndex(full_path)+1) ,strlen(full_path));
     char filename[strlen(full_path)];
@@ -110,27 +105,15 @@ int executeQuery(char full_path[],  rcComm_t* comm, int attributes_number, int s
     strncpy(substr,full_path  ,fileNameLastIndex(full_path));
     char pathname[strlen(full_path)+10];
 
-    snprintf(pathname, sizeof pathname, "=%s%s", ZONE, substr);
+    snprintf(pathname, sizeof pathname, "=%s%s", concat("/",ZONE), substr);
 
     columnValues[1]=pathname;
 
     inputQuery.condValues=columnValues;
 
     int j = genQuery(comm,&inputQuery,&outputQuery);
-    int k=0;
 
-    for(k=0;k<attributes_number;k++){
-       printf("value %s \n",outputQuery.resultValues[k]);
-    }
 }
-
-
-
-
-
-
-
-
 
 
 /**
@@ -142,7 +125,6 @@ int executeQuery(char full_path[],  rcComm_t* comm, int attributes_number, int s
  */
 int genQuery(rcComm_t * conn, InputQuery *inputQuery, OutputQuery *outputQuery)
 {
-    printf("start gen query\n");
     genQueryInp_t queryInput;
     genQueryOut_t *queryOutput;
     int status = 0, prevStatus = 0;
@@ -172,20 +154,10 @@ int genQuery(rcComm_t * conn, InputQuery *inputQuery, OutputQuery *outputQuery)
 
     // allocate new arrays for rods api
     queryInput.sqlCondInp.inx = (int *) malloc(inputQuery->condSize * sizeof(int));
-
-
-    //alocar separadamente
-    //queryInput.sqlCondInp.value = (char **) malloc(3000*inputQuery->condSize * sizeof(char));
-
-
-
     queryInput.sqlCondInp.value = malloc( inputQuery->condSize * sizeof(char*));
 
     for (i = 0; i < inputQuery->condSize; i++)
         queryInput.sqlCondInp.value[i] = malloc((2900) * sizeof(char));
-
-
-
 
     for (i=0; i < inputQuery->condSize ; i++)
     {
@@ -193,12 +165,9 @@ int genQuery(rcComm_t * conn, InputQuery *inputQuery, OutputQuery *outputQuery)
         queryInput.sqlCondInp.value[i] = inputQuery->condValues[i];
     }
 
-
-
     // try to execute a generic query
     if (!(status = rcGenQuery(conn, &queryInput, &queryOutput)))
     {
-
         int *resultColumns = (int *) malloc(inputQuery->selectSize * sizeof(int));
         char **resultValues = (char **) malloc(3000*inputQuery->selectSize* sizeof(char));
 
@@ -209,11 +178,8 @@ int genQuery(rcComm_t * conn, InputQuery *inputQuery, OutputQuery *outputQuery)
             {
                 for (j = 0; j < queryOutput->attriCnt; j++)
                 {
-
                     resultColumns[j] = inputQuery->selectsColumns[j];
                     resultValues[j] = queryOutput->sqlResult[j].value;
-                    //printf("******value*****%s\n",queryOutput->sqlResult[j].value);
-
                 }
             }
 
@@ -232,22 +198,13 @@ int genQuery(rcComm_t * conn, InputQuery *inputQuery, OutputQuery *outputQuery)
             status = rcGenQuery(conn, &queryInput, &queryOutput);
         } while (!status);
 
-    }else{
-        debug("erro","");
     }
 
-     //free rods api allocated resources
+    //free rods api allocated resources
     free(queryInput.selectInp.inx);
     free(queryInput.selectInp.value);
-
-    //for (i = 0; i < inputQuery->condSize; i++)
-    //    free(queryInput.sqlCondInp.value[i]);
-
-
-
     free(queryInput.sqlCondInp.inx);
     free(queryInput.sqlCondInp.value);
-
     free(queryOutput);
 
     // let's not return no more rows found as an error

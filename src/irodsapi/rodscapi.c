@@ -1,9 +1,17 @@
+/* NFS-RODS: A Tool for Accessing iRODS Repositories
+ * via the NFS Protocol
+ * (C) 2016, Danilo Mendonça, Vandi Alves, Iure Fe,
+ * Aleciano Lobo Junior, Francisco Airton Silva,
+ * Gustavo Callou and Paulo Maciel <prmm@cin.ufpe.br>
+ */
+
 #include "rodscapi.h"
 #include <stdio.h>
 #include <sys/stat.h>
 #include "dataObjLseek.h"
 #include "utils/rodscapi_utils.h"
 #include "backend.h"
+#include "Config/exports.h"
 
 /**
  * @brief rodsConnect Opens a iRODS connection without LDAP authentication.
@@ -33,6 +41,7 @@ rcComm_t* rodsConnect(){
         return(NULL);
     }
 
+
     return (rodsCommPtr);
 }
 
@@ -52,6 +61,10 @@ rcComm_t* rodsConnectProxy(char * clientUserName,char *zone){
     rcComm_t *rodsCommPtr = 0;
     rErrMsg_t errMsg;
 
+    if(isPublic() || clientUserName==""){
+        return rodsConnect();
+    }
+
     // get user iRODS environment
     if ((status = getRodsEnv(&rodsUserEnv)) < 0){
         return (NULL);
@@ -59,7 +72,7 @@ rcComm_t* rodsConnectProxy(char * clientUserName,char *zone){
 
     // rods api proxy connect
     if ((rodsCommPtr = _rcConnect(rodsUserEnv.rodsHost, rodsUserEnv.rodsPort,
-                                 rodsUserEnv.rodsUserName, rodsUserEnv.rodsZone,clientUserName,zone,&errMsg,0,0 )) == NULL)
+                                  rodsUserEnv.rodsUserName, rodsUserEnv.rodsZone,clientUserName,zone,&errMsg,0,0 )) == NULL)
     {
         return(NULL);
     }
@@ -76,8 +89,6 @@ rcComm_t* rodsConnectProxy(char * clientUserName,char *zone){
 int rodsLogin(rcComm_t *rodsCommPtr)
 {
     int status = 0;
-
-    // first of all, we must be connected
     if (!rodsCommPtr)
         return (status);
 
@@ -124,11 +135,6 @@ int listCollectionOld(char *collPath, rcComm_t *rodsCommPtr)
     do {
         status = rclReadCollection(rodsCommPtr, &rodsColl, &rodsCollEntry);
 
-        if (status >= 0)
-        {
-            printf("Collection: %s\n", rodsCollEntry.collName);
-        }
-
     } while (status >= 0);
 
     // close the collection handle
@@ -136,6 +142,7 @@ int listCollectionOld(char *collPath, rcComm_t *rodsCommPtr)
 
     return (status);
 }
+
 
 /**
  * @brief listCollection Retrieves the contents of a folder in iRODS storage system.
@@ -152,8 +159,6 @@ int listCollectionOld(char *collPath, rcComm_t *rodsCommPtr)
 int listCollection(char *remoteFolder, char *localFolder, rcComm_t *rodsCommPtr)
 {
     removedirectoryrecursively(localFolder);
-
-
     debug("LIST COllection  %s",localFolder);
     struct stat s;
     int err = stat(localFolder, &s);
@@ -165,12 +170,6 @@ int listCollection(char *remoteFolder, char *localFolder, rcComm_t *rodsCommPtr)
             perror("stat");
             exit(1);
         }
-    } else {
-      //  if(S_ISDIR(s.st_mode)) {
-            /* it's a dir */
-        //} else {
-            /* exists but is no dir */
-        //}
     }
 
     int status, handleInx;
@@ -189,7 +188,7 @@ int listCollection(char *remoteFolder, char *localFolder, rcComm_t *rodsCommPtr)
 
     debug("ListCollection RemoteFolder %s",remoteFolder);
     // read collection while there are objects to loop over
-      while ((status = rcReadCollection (rodsCommPtr, handleInx, &collEnt)) >= 0) {
+    while ((status = rcReadCollection (rodsCommPtr, handleInx, &collEnt)) >= 0) {
 
         if(collEnt->objType == DATA_OBJ_T){
 
@@ -200,18 +199,16 @@ int listCollection(char *remoteFolder, char *localFolder, rcComm_t *rodsCommPtr)
             path2 = concat(localFolder, "/");
             path = concat(path2, collEnt->dataName);
             command = concat("echo \" \" > ", path);
-
             system(command);
-
             char * pathIrods = concat(remoteFolder,"/");
             pathIrods = concat(pathIrods,collEnt->dataName);
 
             int dataMode = fileMode(pathIrods,rodsCommPtr);
-            debug("data mode %d",dataMode);
 
+            debug("DATA MODE %d",dataMode);
 
             if(dataMode==1200){
-              //own
+                //own
                 command="chmod 600 ";
             }else if(dataMode==1120){
                 //write
@@ -225,28 +222,8 @@ int listCollection(char *remoteFolder, char *localFolder, rcComm_t *rodsCommPtr)
             }
 
             command = concat(command, path);
-
             system(command);
-
-
-            /*
-            command = concat("chown ", rodsCommPtr->clientUser.userName);
-            command = concat(command, ":");
-            command = concat(command, rodsCommPtr->clientUser.userName);
-            command = concat(command, "  ");
-            command = concat(command, path);
-            */
-
-            system(command);
-
-
-
             debug("ReadDir Create %s",path);
-
-
-
-
-
 
             free(path);
             free(path2);
@@ -257,24 +234,15 @@ int listCollection(char *remoteFolder, char *localFolder, rcComm_t *rodsCommPtr)
             if(strlen(collEnt->collName)==strlen(remoteFolder))
                 continue;
 
-
             if(!collEnt->collName){
                 break;
             }
 
-
-
-
-
             dir = basename(collEnt->collName);
-
             path2 = concat(localFolder, "/");
             path = concat(path2, dir);
 
-
-
             debug("ReadDir %s",path);
-
             mkdir(path, S_IRWXU);
 
             free(path);
@@ -285,13 +253,10 @@ int listCollection(char *remoteFolder, char *localFolder, rcComm_t *rodsCommPtr)
     }
 
     // close the collection handle
-
     status = rcCloseCollection (rodsCommPtr, handleInx);
 
     return (status);
 }
-
-
 
 
 /**
@@ -320,6 +285,7 @@ int makeCollection(char *collPath, rcComm_t *rodsCommPtr, bool makeRecursive)
     // return status to caller
     return (status);
 }
+
 
 /**
  * @brief removeCollection Removes an empty collection.
@@ -351,6 +317,7 @@ int removeCollection(char *collPath, rcComm_t *rodsCommPtr)
     return (status);
 }
 
+
 /**
  * @brief fsize Returns the file size of a local file
  * @param filename The path to the file
@@ -364,6 +331,7 @@ off_t fsize(char *filename) {
 
     return -1;
 }
+
 
 /**
  * @brief iGetatt Fetch the size value of an iRODS object.
@@ -382,23 +350,21 @@ int iGetatt(nfs_fh3 fh, fattr3 fat, char *path, int *size,int uidProxy){
 
     char* userName=malloc (300 *(sizeof (char)));
 
-    int resultLdap = getLdapName(uidProxy,userName);
+    int resultUser = getUserName(uidProxy,userName);
 
-    if(resultLdap<0){
-        debug("iGetatt - Cant Connect to LDAP", "");
-      exit(0);
+    if(resultUser<0){
+        debug("iGetatt- cant find user","");
+        userName = "";
     }
 
-    rcComm_t* comm = rodsConnectProxy(userName,"tempZone");
+    rcComm_t* comm = rodsConnectProxy(userName,ZONE);
 
-
-    path = concatProxy(ZONE,userName,path);
-   // rcComm_t* comm = rodsConnect();
-    //path= concat(ZONE,path);
+    path = concatProxy(concat("/",ZONE),userName,path);
     int i = rodsLogin(comm);
     int j =  getatt_aux(fh, fat, comm, path, size);
     return j;
 }
+
 
 /**
  * @brief putFile Sends a file stored in the local filesystem to the iRODS storage
@@ -435,10 +401,6 @@ int putFile(char *localPath, char *objPath, rcComm_t * rodsCommPtr)
     // for now, we use the generic data type
     addKeyVal(&putParam.condInput, DATA_TYPE_KW, "generic");
 
-    // target storage resource, if defined
-    //if (rodsResc.length())
-    //    addKeyVal(&putParam.condInput, DEST_RESC_NAME_KW, rodsResc.c_str());
-
     // take copy of the local file path for the rods api
     strcpy(filePath, localPath);
 
@@ -459,28 +421,18 @@ int putFile(char *localPath, char *objPath, rcComm_t * rodsCommPtr)
  */
 int getFileInfo(char *path, rcComm_t * conn, rodsObjStat_t **rodsObjStatOut)
 {
-
-
     dataObjInp_t dataObjInp;
-
-    //rodsObjStat_t *rodsObjStatOut = NULL;
-
     bzero (&dataObjInp, sizeof (dataObjInp));
-
     rstrcpy (dataObjInp.objPath, path, MAX_NAME_LEN);
-
     int status = rcObjStat (conn, &dataObjInp, rodsObjStatOut);
 
     if (status < 0) {
-     return -1;
+        return -1;
     }
-
-    //printf("rods type %d \n",rodsObjStatOut->objType);
-
-    //freeRodsObjStat (rodsObjStatOut);
 
     return (status);
 }
+
 
 /**
  * @brief getFile Downloads a file located at the iRODS storage.
@@ -523,6 +475,7 @@ int getFile(char *localPath, char *objPath, bool verifyChecksum, bool allowOverw
     return (status);
 }
 
+
 /**
  * @brief removeObj Deletes an iRODS object.
  *
@@ -551,6 +504,7 @@ int removeObj(char *objPath, rcComm_t * rodsCommPtr)
     return (status);
 }
 
+
 /**
  * @deprecated
  * @brief testWrite This function was created just for learning purposes
@@ -573,7 +527,7 @@ void testWrite(rcComm_t * conn){
 
     bzero (&dataObjWriteOutBBuf, sizeof (dataObjWriteOutBBuf));
 
-    char * ronaldo = "Ronaldo. Brilha muito no corinthians.\n";
+    char * ronaldo = "Ronaldo.\n";
     dataObjWriteInp.len = strlen(ronaldo);
     dataObjWriteOutBBuf.buf = (void *) ronaldo;
     dataObjWriteOutBBuf.len = strlen(ronaldo);
@@ -598,6 +552,7 @@ void testWrite(rcComm_t * conn){
     rcDataObjClose (conn, &dataObjWriteInp);
 }
 
+
 /**
  * @brief createFile Creates an empty file in the iRODS storage
  * @param objPath The path of the iRODS file to be created
@@ -605,43 +560,26 @@ void testWrite(rcComm_t * conn){
  * @return A status code.
  */
 int createFile(char *objPath, rcComm_t * rodsCommPtr){
-    //char *emptyFile = "emptyFile";
-    /*debug("Caiu aqui 1\n", 0);
-
-    if( access( emptyFile, F_OK ) == -1 ) {
-        debug("Caiu aqui 2\n", 0);
-        char createCommand[256] = "touch /home/emc/emptyFile";
-        system(createCommand);
-    }
-
-    int status;
-    status = putFile("/home/emc/emptyFile", objPath, rodsCommPtr);
-    */
-
+    rodsEnv rodsUserEnv;
+    getRodsEnv(&rodsUserEnv);
     dataObjInp_t dataObjInp;
-
     bzero (&dataObjInp, sizeof (dataObjInp));
-
     rstrcpy (dataObjInp.objPath, objPath, MAX_NAME_LEN);
     dataObjInp.createMode = 0750;
     dataObjInp.dataSize = 12345;
     dataObjInp.openFlags = O_WRONLY;
-    addKeyVal (&dataObjInp.condInput, DEST_RESC_NAME_KW, "demoResc");
+    if(strlen(rodsUserEnv.rodsDefResource) == 0){
+          addKeyVal (&dataObjInp.condInput, DEST_RESC_NAME_KW, "demoResc");
+    }
+    else{
+        addKeyVal (&dataObjInp.condInput, DEST_RESC_NAME_KW, rodsUserEnv.rodsDefResource);
+    }
+
     int status = rcDataObjCreate (rodsCommPtr, &dataObjInp);
 
     return status;
 }
 
-/**
- * @deprecated
- * @brief iread
- * @param objPath
- * @param rodsCommPtr
- * @return
- */
-int iread(char *objPath, rcComm_t * rodsCommPtr){
-    return 0;
-}
 
 /**
  * @brief renameFile Renames an iRODS object.
@@ -664,6 +602,7 @@ int renameFile(char *objPathDes, char *objPathSrc, rcComm_t * rodsCommPtr){
 
     return (status);
 }
+
 
 /**
  * @deprecated
@@ -714,7 +653,7 @@ void testRead(rcComm_t * conn){
 
 
 /**
- * @brief get_pre_cached_irods funcao não mais utilizada, ela recupera informacoes de um arquivo antes da modificacao de um atributo
+ * @brief get_pre_cached_irods This function was created solely to learning purposes
  * @param path
  * @param owner
  * @return
@@ -766,16 +705,11 @@ pre_op_attr get_pre_cached_irods(char *path,char** owner)
 
     inputQuery.condValues=columnValues;
 
-
-
-
     int j = genQuery(comm,&inputQuery,&outputQuery);
 
     //atribuir esses tempos
 
     debug("d  %d\n",j);
-
-
 
     debug("PRE irods SIZE  %s\n",outputQuery.resultValues[0]);
     debug("PRE irods CTIME %s\n",outputQuery.resultValues[1]);
@@ -784,26 +718,19 @@ pre_op_attr get_pre_cached_irods(char *path,char** owner)
 
     *owner= outputQuery.resultValues[1];
 
-
-
-
-
-
     result.pre_op_attr_u.attributes.size = atoi(outputQuery.resultValues[0]);
     result.pre_op_attr_u.attributes.ctime.seconds = 0;
     result.pre_op_attr_u.attributes.ctime.nseconds = 0;
     result.pre_op_attr_u.attributes.mtime.seconds = atoi(outputQuery.resultValues[2]);
     result.pre_op_attr_u.attributes.mtime.nseconds = 0;
 
-
-
-
     return result;
 
 }
 
+
 /**
- * @brief muda o acesso a um arquivo do irods
+ * @brief Changes an iRODS object access
  * @param path
  * @param userName
  * @param accessLevel write, read, own, null
@@ -822,7 +749,7 @@ int changeAttr(char *path,char *userName,char * accessLevel,rcComm_t *conn){
 
     modAccessControlInp.userName = userName;
 
-    modAccessControlInp.zone = "tempZone";
+    modAccessControlInp.zone = ZONE;
 
     modAccessControlInp.path = path;
 
@@ -830,10 +757,7 @@ int changeAttr(char *path,char *userName,char * accessLevel,rcComm_t *conn){
     debug("SETATTR - MOD to %s\n",accessLevel);
     debug("SETATTR - USER to %s\n",userName);
 
-
     status = rcModAccessControl(conn, &modAccessControlInp);
-
-
 
     return status;
 }
@@ -863,14 +787,18 @@ int iWrite(char *objPath, char *buff, int len, int offset, rcComm_t *conn)
     bzero (&dataObjWriteInp, sizeof (dataObjWriteInp));
     rstrcpy (dataObjInp.objPath, objPath, MAX_NAME_LEN);
     dataObjInp.openFlags = O_RDWR;
-    addKeyVal (&dataObjInp.condInput, DEST_RESC_NAME_KW, "demoResc");
+    rodsEnv rodsUserEnv;
+    getRodsEnv(&rodsUserEnv);
+    if(strlen(rodsUserEnv.rodsDefResource) == 0){
+          addKeyVal (&dataObjInp.condInput, DEST_RESC_NAME_KW, "demoResc");
+    }
+    else{
+        addKeyVal (&dataObjInp.condInput, DEST_RESC_NAME_KW, rodsUserEnv.rodsDefResource);
+    }
 
     openStat_t *openStat = NULL;
-
     dataObjWriteInp.l1descInx = rcDataObjOpenAndStat(conn, &dataObjInp, &openStat);
-
     bzero (&dataObjWriteOutBBuf, sizeof (dataObjWriteOutBBuf));
-
     dataObjWriteInp.len = len;
     dataObjWriteOutBBuf.buf = (void *) buff;
     dataObjWriteOutBBuf.len = len;
@@ -897,25 +825,26 @@ int iWrite(char *objPath, char *buff, int len, int offset, rcComm_t *conn)
     return status1;
 }
 
+
 /**
- * @brief rodsConnectLDAP Opens an iRODS connection using LDAP authentication
- * @param uidProxy The user ID stored in the LDAP backend
+ * @brief rodsConnectLDAP Opens an iRODS connection for a private collection
+ * @param uidProxy The user ID
  * @return An opened iRODS connection.
  */
-rcComm_t* rodsConnectLDAP(int uidProxy){
+rcComm_t* rodsConnecUser(int uidProxy){
 
     debug("Login  RUID %jd", uidProxy);
 
     char* userName=malloc (300 *(sizeof (char)));
 
-    int resultLdap = getLdapName(uidProxy,userName);
+    int result = getUserName(uidProxy,userName);
 
-    if(resultLdap<0){
-        debug("CREATE - Cant Connect to LDAP", "");
-        exit(0);
+    if(result<0){
+        debug("rodsConnecUser- cant find user","");
+        userName="";
     }
 
-    rcComm_t* comm = rodsConnectProxy(userName,"tempZone");
+    rcComm_t* comm = rodsConnectProxy(userName,ZONE);
 
     free( userName );
 
@@ -923,37 +852,51 @@ rcComm_t* rodsConnectLDAP(int uidProxy){
 }
 
 
+int isPublic(){
+    char *pch = strstr(export_path, "public");
+
+    if(pch || !NFS_RODS_PRIVATE_COLL){
+        debug("isPublic: %s","TRUE");
+        return TRUE;
+    }
+    debug("isPublic: %s","FALSE");
+
+    return FALSE;
+
+}
 
 
 /**
- * @brief Retorna o path do irods que sera utilizado nas consultas dos callbacks
- * @param id do usuario
+ * @brief Translates a local path to the iRODS path
+ * @param User Id
  * @param path
  * @return
  */
 char* getRodsPath(int uidProxy,char* path){
     debug("getRodsPath START", "");
 
-    char* userName=malloc(3000*(sizeof (char)));
+    if(isPublic()){
+        debug("getRodsPath END", "");
 
-    int resultLdap = getLdapName(uidProxy,userName);
-
-    if(resultLdap<0){
-        debug("CREATE - Cant Connect to LDAP", "");
-        resultLdap = getLdapName(1000,userName);
-        //FIXME
-        //exit(0);
+        return concatProxy(concat("/",ZONE),"public", path);
     }
 
-     char *rodspath = concatProxy(ZONE,userName, path);
+    char* userName=malloc(MAX_NAME_LEN*(sizeof (char)));
 
-     free( userName );
+    int result = getUserName(uidProxy,userName);
+    if(result<0){
+        debug("getRodsPath- cant find user","");
+        userName="";
 
-     debug("getRodsPath END", "");
+    }
+    char *rodspath = concatProxy(concat("/",ZONE),userName, path);
+    free( userName );
+    debug("getRodsPath END", "");
 
-     return rodspath;
+    return rodspath;
 
 }
+
 
 /**
  * @brief fileSize Retrieves the file size of an iRODS file.
@@ -968,13 +911,18 @@ rodsLong_t fileSize(char * objPath, rcComm_t * conn ){
     bzero (&dataObjWriteInp, sizeof (dataObjWriteInp));
     rstrcpy (dataObjInp.objPath, objPath, MAX_NAME_LEN);
     dataObjInp.openFlags = O_RDWR;
-    addKeyVal (&dataObjInp.condInput, DEST_RESC_NAME_KW, "demoResc");
+    rodsEnv rodsUserEnv;
+    getRodsEnv(&rodsUserEnv);
+    if(strlen(rodsUserEnv.rodsDefResource) == 0){
+          addKeyVal (&dataObjInp.condInput, DEST_RESC_NAME_KW, "demoResc");
+    }
+    else{
+        addKeyVal (&dataObjInp.condInput, DEST_RESC_NAME_KW, rodsUserEnv.rodsDefResource);
+    }
 
     openStat_t *openStat = NULL;
 
     dataObjWriteInp.l1descInx = rcDataObjOpenAndStat(conn, &dataObjInp, &openStat);
-
-
     if(openStat){
         return openStat->dataSize;
     }
@@ -983,22 +931,19 @@ rodsLong_t fileSize(char * objPath, rcComm_t * conn ){
     }
 }
 
+
 /**
- * @brief fileMode realiza uma consulta query para descobrir o acesso a um arquivo .
+ * @brief fileMode Uses query to determine the file mode
  * @param path The path of the object to be queried
  * @param conn An opened iRODS connection.
  * @return id da permissao .1200 own, 1120 write, 1050 read
  */
 int fileMode(char * path, rcComm_t * comm ){
-
-
     OutputQuery outputQuery;
     InputQuery inputQuery;
 
     inputQuery.selectSize=1;
     int *selects = (int *) malloc(inputQuery.selectSize * sizeof(int));
-
-
     selects[0] = 700;//idmode
 
     inputQuery.selectsColumns =selects ;
@@ -1009,7 +954,6 @@ int fileMode(char * path, rcComm_t * comm ){
     columns[1] = 501;//path
     inputQuery.condColumns=columns;
 
-    //char **columnValues = (char *) malloc(inputQuery.condSize* sizeof(char));
     char **columnValues = (char **) malloc(3000*inputQuery.condSize* sizeof(char));
 
     char* substr = (char*) malloc(strlen(path));
@@ -1026,10 +970,7 @@ int fileMode(char * path, rcComm_t * comm ){
     free(substr);
 
     columnValues[1]=pathname;
-
     inputQuery.condValues=columnValues;
-
-
 
     int s = genQuery(comm,&inputQuery,&outputQuery);
 
@@ -1044,9 +985,6 @@ int fileMode(char * path, rcComm_t * comm ){
     free(outputQuery.resultCollumns);
     free(outputQuery.resultValues);
 
-
     return atoi(result);
 
 }
-
-

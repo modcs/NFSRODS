@@ -7,7 +7,7 @@
 
 #ifdef WIN32
 #define _WIN32_WINDOWS 0x0410	       /* We require Windows 98 or later For
-				          GetLongPathName */
+    GetLongPathName */
 #include <errno.h>
 #include <stdio.h>
 #include "winsupport.h"
@@ -25,9 +25,9 @@
 
 #define MAX_NUM_DRIVES 26
 #define FT70SEC 11644473600LL	       /* seconds between 1601-01-01 and
-				          1970-01-01 */
+    1970-01-01 */
 #define FT80SEC 315529200	       /* seconds between 1970-01-01 and
-				          1980-01-01 */
+    1980-01-01 */
 
 #define wsizeof(x) (sizeof(x)/sizeof(wchar_t))
 
@@ -44,10 +44,10 @@ static char *get_fdname(int fd)
     fdname *fn;
 
     for (fn = fdnames; fn; fn = fn->next) {
-	if (fn->fd == fd) {
-	    return fn->name;
-	    break;
-	}
+        if (fn->fd == fd) {
+            return fn->name;
+            break;
+        }
     }
 
     assert(0);
@@ -60,8 +60,8 @@ static int add_fdname(int fd, const char *name)
 
     fn = malloc(sizeof(fdname));
     if (!fn) {
-	logmsg(LOG_CRIT, "add_mount: Unable to allocate memory");
-	return -1;
+        logmsg(LOG_CRIT, "add_mount: Unable to allocate memory");
+        return -1;
     }
 
     fn->fd = fd;
@@ -77,13 +77,13 @@ static void remove_fdname(int fd)
     fdname *fn, **prevnext = &fdnames;
 
     for (fn = fdnames; fn; fn = fn->next) {
-	if (fn->fd == fd) {
-	    *prevnext = fn->next;
-	    free(fn->name);
-	    free(fn);
-	    break;
-	}
-	prevnext = &fn->next;
+        if (fn->fd == fd) {
+            *prevnext = fn->next;
+            free(fn->name);
+            free(fn);
+            break;
+        }
+        prevnext = &fn->next;
     }
 }
 
@@ -94,9 +94,9 @@ static void remove_fdname(int fd)
 
 /*
  * Copyright 2001-2004 Unicode, Inc.
- * 
+ *
  * Disclaimer
- * 
+ *
  * This source code is provided as is by Unicode, Inc. No claims are
  * made as to fitness for any particular purpose. No warranties of any
  * kind are expressed or implied. The recipient agrees to determine
@@ -104,9 +104,9 @@ static void remove_fdname(int fd)
  * purchased on magnetic or optical media from Unicode, Inc., the
  * sole remedy for any claim will be exchange of defective media
  * within 90 days of receipt.
- * 
+ *
  * Limitations on Rights to Redistribute This Code
- * 
+ *
  * Unicode, Inc. hereby grants the right to freely use the information
  * supplied in this file in the creation of products supporting the
  * Unicode Standard, and to make copies of this file in any form
@@ -157,48 +157,48 @@ static int isLegalUTF8(const unsigned char *source, int length)
     const unsigned char *srcptr = source + length;
 
     switch (length) {
-	default:
-	    return 0;
-	    /* Everything else falls through when "1"... */
-	case 4:
-	    if ((a = (*--srcptr)) < 0x80 || a > 0xBF)
-		return 0;
-	case 3:
-	    if ((a = (*--srcptr)) < 0x80 || a > 0xBF)
-		return 0;
-	case 2:
-	    if ((a = (*--srcptr)) > 0xBF)
-		return 0;
+    default:
+        return 0;
+        /* Everything else falls through when "1"... */
+    case 4:
+        if ((a = (*--srcptr)) < 0x80 || a > 0xBF)
+            return 0;
+    case 3:
+        if ((a = (*--srcptr)) < 0x80 || a > 0xBF)
+            return 0;
+    case 2:
+        if ((a = (*--srcptr)) > 0xBF)
+            return 0;
 
-	    switch (*source) {
-		    /* no fall-through in this inner switch */
-		case 0xE0:
-		    if (a < 0xA0)
-			return 0;
-		    break;
-		case 0xED:
-		    if (a > 0x9F)
-			return 0;
-		    break;
-		case 0xF0:
-		    if (a < 0x90)
-			return 0;
-		    break;
-		case 0xF4:
-		    if (a > 0x8F)
-			return 0;
-		    break;
-		default:
-		    if (a < 0x80)
-			return 0;
-	    }
+        switch (*source) {
+        /* no fall-through in this inner switch */
+        case 0xE0:
+            if (a < 0xA0)
+                return 0;
+            break;
+        case 0xED:
+            if (a > 0x9F)
+                return 0;
+            break;
+        case 0xF0:
+            if (a < 0x90)
+                return 0;
+            break;
+        case 0xF4:
+            if (a > 0x8F)
+                return 0;
+            break;
+        default:
+            if (a < 0x80)
+                return 0;
+        }
 
-	case 1:
-	    if (*source >= 0x80 && *source < 0xC2)
-		return 0;
+    case 1:
+        if (*source >= 0x80 && *source < 0xC2)
+            return 0;
     }
     if (*source > 0xF4)
-	return 0;
+        return 0;
     return 1;
 }
 
@@ -213,10 +213,10 @@ int isLegalUTF8String(const unsigned char *source)
     seq = source;
 
     while (seq < sourceend) {
-	seqlen = trailingBytesForUTF8[*seq] + 1;
-	if (!isLegalUTF8(seq, seqlen))
-	    return 0;
-	seq += seqlen;
+        seqlen = trailingBytesForUTF8[*seq] + 1;
+        if (!isLegalUTF8(seq, seqlen))
+            return 0;
+        seq += seqlen;
     }
 
     return 1;
@@ -237,61 +237,61 @@ static wchar_t *intpath2winpath(const char *intpath)
        to MultiByteToWideChar, since it's only available in late versions of
        Windows. */
     if (!isLegalUTF8String(intpath)) {
-	logmsg(LOG_CRIT, "intpath2winpath: Illegal UTF-8 string:%s", intpath);
-	return NULL;
+        logmsg(LOG_CRIT, "intpath2winpath: Illegal UTF-8 string:%s", intpath);
+        return NULL;
     }
 
     /* Skip over multiple root slashes for paths like ///home/john */
     lastrootslash = intpath;
     while (*lastrootslash == '/')
-	lastrootslash++;
+        lastrootslash++;
     if (lastrootslash != intpath)
-	lastrootslash--;
+        lastrootslash--;
 
     intlen = strlen(lastrootslash);
     /* One extra for /c -> c:\ */
     winpath_len = sizeof(wchar_t) * (intlen + 2);
     winpath = malloc(winpath_len);
     if (!winpath) {
-	logmsg(LOG_CRIT, "intpath2winpath: Unable to allocate memory");
-	return NULL;
+        logmsg(LOG_CRIT, "intpath2winpath: Unable to allocate memory");
+        return NULL;
     }
 
     if (!MultiByteToWideChar
-	(CP_UTF8, 0, lastrootslash, -1, winpath, winpath_len)) {
-	logmsg(LOG_CRIT, "intpath2winpath: MultiByteToWideChar failed");
-	return NULL;
+            (CP_UTF8, 0, lastrootslash, -1, winpath, winpath_len)) {
+        logmsg(LOG_CRIT, "intpath2winpath: MultiByteToWideChar failed");
+        return NULL;
     }
 
     /* If path ends with /.., chop of the last component. Eventually, we
        might want to eliminate all occurances of .. */
     lastslash = wcsrchr(winpath, '/');
     if (!wcscmp(lastslash, L"/..")) {
-	*lastslash = '\0';
-	lastslash = wcsrchr(winpath, '/');
-	*lastslash = '\0';
+        *lastslash = '\0';
+        lastslash = wcsrchr(winpath, '/');
+        *lastslash = '\0';
     }
 
     /* Translate /x -> x:/ and /x/something -> x:/something */
     if ((winpath[0] == '/') && winpath[1]) {
-	switch (winpath[2]) {
-	    case '\0':
-		winpath[2] = '/';
-		winpath[3] = '\0';
-		/* fall through */
+        switch (winpath[2]) {
+        case '\0':
+            winpath[2] = '/';
+            winpath[3] = '\0';
+            /* fall through */
 
-	    case '/':
-		winpath[0] = winpath[1];
-		winpath[1] = ':';
-		break;
+        case '/':
+            winpath[0] = winpath[1];
+            winpath[1] = ':';
+            break;
 
-	    default:
-		break;
-	}
+        default:
+            break;
+        }
     }
 
     while ((slash = wcschr(winpath, '/')) != NULL) {
-	*slash = '\\';
+        *slash = '\\';
     }
 
     return winpath;
@@ -313,7 +313,7 @@ int win_truncate(const char *path, off_t length)
 
     fd = win_open(path, O_WRONLY);
     if (fd < 0)
-	return -1;
+        return -1;
     ret = chsize(fd, length);
     saved_errno = errno;
     win_close(fd);
@@ -341,8 +341,8 @@ int win_fchmod(int fildes, mode_t mode)
 
     winpath = intpath2winpath(get_fdname(fildes));
     if (!winpath) {
-	errno = EINVAL;
-	return -1;
+        errno = EINVAL;
+        return -1;
     }
 
     ret = _wchmod(winpath, mode);
@@ -367,7 +367,7 @@ ssize_t pread(int fd, void *buf, size_t count, off_t offset)
     off_t ret;
 
     if ((ret = lseek(fd, offset, SEEK_SET)) < 0)
-	return -1;
+        return -1;
     size = read(fd, buf, count);
     return size;
 }
@@ -382,7 +382,7 @@ ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset)
     ULARGE_INTEGER fti;
 
     if ((ret = lseek(fd, offset, SEEK_SET)) < 0)
-	return -1;
+        return -1;
     size = write(fd, buf, count);
 
     /* Since we are using the CreationTime attribute as "ctime", we need to
@@ -398,9 +398,9 @@ ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset)
     ft.dwLowDateTime = fti.LowPart;
     ft.dwHighDateTime = fti.HighPart;
     if (!SetFileTime(h, &ft, NULL, NULL)) {
-	fprintf(stderr,
-		"warning: pwrite: SetFileTime failed with error %ld\n",
-		GetLastError());
+        fprintf(stderr,
+                "warning: pwrite: SetFileTime failed with error %ld\n",
+                GetLastError());
     }
 
     return size;
@@ -421,27 +421,27 @@ int win_init()
 
     /* Verify that -s is used */
     if (!opt_singleuser) {
-	fprintf(stderr, "Single-user mode is required on this platform.\n");
-	exit(1);
+        fprintf(stderr, "Single-user mode is required on this platform.\n");
+        exit(1);
     }
 
     /* Verify that -d is used */
     if (opt_detach) {
-	fprintf(stderr,
-		"Foreground (debug) mode is required on this platform.\n");
-	exit(1);
+        fprintf(stderr,
+                "Foreground (debug) mode is required on this platform.\n");
+        exit(1);
     }
 
     /* init winsock */
     winsock_ver = MAKEWORD(1, 1);
     if (WSAStartup(winsock_ver, &wsadata)) {
-	fprintf(stderr, "Unable to initialise WinSock\n");
-	exit(1);
+        fprintf(stderr, "Unable to initialise WinSock\n");
+        exit(1);
     }
     if (LOBYTE(wsadata.wVersion) != 1 || HIBYTE(wsadata.wVersion) != 1) {
-	fprintf(stderr, "WinSock version is incompatible with 1.1\n");
-	WSACleanup();
-	exit(1);
+        fprintf(stderr, "WinSock version is incompatible with 1.1\n");
+        WSACleanup();
+        exit(1);
     }
 
     /* disable error popups, for example from drives not ready */
@@ -459,7 +459,7 @@ void win_shutdown()
    st_dev and st_ino. These are calculated as follows:
 
    st_dev is set to the drive number (0=A 1=B ...). Our virtual root
-   "/" gets a st_dev of 0xff. 
+   "/" gets a st_dev of 0xff.
 
    st_ino is hashed from the full file path. Each half produces a 32
    bit hash. These are concatenated to a 64 bit value. The risk that
@@ -492,30 +492,30 @@ int win_stat(const char *file_name, backend_statstruct * buf)
        virtual root has a hardcoded hash value of 1, to simplify debugging
        etc. */
     if (!strcmp(file_name, "/")) {
-	buf->st_mode = S_IFDIR | S_IRUSR | S_IWUSR;
-	buf->st_nlink = MAX_NUM_DRIVES + 3;	/* 3 extra for: . .. / */
-	buf->st_uid = 1;
-	buf->st_gid = 1;
-	buf->st_rdev = 0;
-	buf->st_size = 4096;
-	buf->st_atime = 0;
-	buf->st_mtime = 0;
-	buf->st_ctime = 0;
-	buf->st_dev = 0xff;
-	buf->st_ino = 1;
-	return 0;
+        buf->st_mode = S_IFDIR | S_IRUSR | S_IWUSR;
+        buf->st_nlink = MAX_NUM_DRIVES + 3;	/* 3 extra for: . .. / */
+        buf->st_uid = 1;
+        buf->st_gid = 1;
+        buf->st_rdev = 0;
+        buf->st_size = 4096;
+        buf->st_atime = 0;
+        buf->st_mtime = 0;
+        buf->st_ctime = 0;
+        buf->st_dev = 0xff;
+        buf->st_ino = 1;
+        return 0;
     }
 
     winpath = intpath2winpath(file_name);
     if (!winpath) {
-	errno = EINVAL;
-	return -1;
+        errno = EINVAL;
+        return -1;
     }
 
     ret = _wstat(winpath, &win_statbuf);
     if (ret < 0) {
-	free(winpath);
-	return ret;
+        free(winpath);
+        return ret;
     }
 
     /* Copy values to our struct */
@@ -532,8 +532,8 @@ int win_stat(const char *file_name, backend_statstruct * buf)
 
     retval = GetFullPathNameW(winpath, wsizeof(pathbuf), pathbuf, NULL);
     if (!retval) {
-	errno = ENOENT;
-	return -1;
+        errno = ENOENT;
+        return -1;
     }
 
     /* Set st_dev to the drive number */
@@ -542,16 +542,16 @@ int win_stat(const char *file_name, backend_statstruct * buf)
     /* GetLongPathName fails if called with only x:\, and drive x is not
        ready. So, only call it for other paths. */
     if (pathbuf[0] && wcscmp(pathbuf + 1, L":\\")) {
-	retval = GetLongPathNameW(pathbuf, pathbuf, wsizeof(pathbuf));
-	if (!retval || (unsigned) retval > wsizeof(pathbuf)) {
-	    /* Strangely enough, GetLongPathName returns
-	       ERROR_SHARING_VIOLATION for locked files, such as hiberfil.sys 
-	     */
-	    if (GetLastError() != ERROR_SHARING_VIOLATION) {
-		errno = ENAMETOOLONG;
-		return -1;
-	    }
-	}
+        retval = GetLongPathNameW(pathbuf, pathbuf, wsizeof(pathbuf));
+        if (!retval || (unsigned) retval > wsizeof(pathbuf)) {
+            /* Strangely enough, GetLongPathName returns
+           ERROR_SHARING_VIOLATION for locked files, such as hiberfil.sys
+         */
+            if (GetLastError() != ERROR_SHARING_VIOLATION) {
+                errno = ENAMETOOLONG;
+                return -1;
+            }
+        }
     }
 
     /* Hash st_ino, by splitting in two halves */
@@ -567,8 +567,8 @@ int win_stat(const char *file_name, backend_statstruct * buf)
 
 #if 0
     fprintf(stderr,
-	    "win_stat: file=%s, ret=%d, st_dev=0x%x, st_ino=0x%I64x\n",
-	    file_name, ret, buf->st_dev, buf->st_ino);
+            "win_stat: file=%s, ret=%d, st_dev=0x%x, st_ino=0x%I64x\n",
+            file_name, ret, buf->st_dev, buf->st_ino);
 #endif
     free(winpath);
     return ret;
@@ -588,14 +588,14 @@ int win_open(const char *pathname, int flags, ...)
 
     winpath = intpath2winpath(pathname);
     if (!winpath) {
-	errno = EINVAL;
-	return -1;
+        errno = EINVAL;
+        return -1;
     }
 
     fd = _wopen(winpath, flags | O_BINARY, mode);
     free(winpath);
     if (fd < 0) {
-	return fd;
+        return fd;
     }
 
     return add_fdname(fd, pathname);
@@ -615,7 +615,7 @@ int win_fstat(int fd, backend_statstruct * buf)
 
 /*
   opendir implementation which emulates a virtual root with the drive
-  letters presented as directories. 
+  letters presented as directories.
 */
 UNFS3_WIN_DIR *win_opendir(const char *name)
 {
@@ -624,29 +624,29 @@ UNFS3_WIN_DIR *win_opendir(const char *name)
 
     ret = malloc(sizeof(UNFS3_WIN_DIR));
     if (!ret) {
-	logmsg(LOG_CRIT, "win_opendir: Unable to allocate memory");
-	return NULL;
+        logmsg(LOG_CRIT, "win_opendir: Unable to allocate memory");
+        return NULL;
     }
 
     if (!strcmp("/", name)) {
-	/* Emulate root */
-	ret->stream = NULL;
-	ret->currentdrive = 0;
-	ret->logdrives = GetLogicalDrives();
+        /* Emulate root */
+        ret->stream = NULL;
+        ret->currentdrive = 0;
+        ret->logdrives = GetLogicalDrives();
     } else {
-	winpath = intpath2winpath(name);
-	if (!winpath) {
-	    free(ret);
-	    errno = EINVAL;
-	    return NULL;
-	}
+        winpath = intpath2winpath(name);
+        if (!winpath) {
+            free(ret);
+            errno = EINVAL;
+            return NULL;
+        }
 
-	ret->stream = _wopendir(winpath);
-	free(winpath);
-	if (ret->stream == NULL) {
-	    free(ret);
-	    ret = NULL;
-	}
+        ret->stream = _wopendir(winpath);
+        free(winpath);
+        if (ret->stream == NULL) {
+            free(ret);
+            ret = NULL;
+        }
     }
 
     return ret;
@@ -655,45 +655,45 @@ UNFS3_WIN_DIR *win_opendir(const char *name)
 struct dirent *win_readdir(UNFS3_WIN_DIR * dir)
 {
     if (dir->stream == NULL) {
-	/* Emulate root */
-	for (; dir->currentdrive < MAX_NUM_DRIVES; dir->currentdrive++) {
-	    if (dir->logdrives & 1 << dir->currentdrive)
-		break;
-	}
+        /* Emulate root */
+        for (; dir->currentdrive < MAX_NUM_DRIVES; dir->currentdrive++) {
+            if (dir->logdrives & 1 << dir->currentdrive)
+                break;
+        }
 
-	if (dir->currentdrive < MAX_NUM_DRIVES) {
-	    dir->de.d_name[0] = 'a' + dir->currentdrive;
-	    dir->de.d_name[1] = '\0';
-	    dir->currentdrive++;
-	    return &dir->de;
-	} else {
-	    return NULL;
-	}
+        if (dir->currentdrive < MAX_NUM_DRIVES) {
+            dir->de.d_name[0] = 'a' + dir->currentdrive;
+            dir->de.d_name[1] = '\0';
+            dir->currentdrive++;
+            return &dir->de;
+        } else {
+            return NULL;
+        }
     } else {
-	struct _wdirent *de;
+        struct _wdirent *de;
 
-	de = _wreaddir(dir->stream);
-	if (!de) {
-	    return NULL;
-	}
+        de = _wreaddir(dir->stream);
+        if (!de) {
+            return NULL;
+        }
 
-	if (!WideCharToMultiByte
-	    (CP_UTF8, 0, de->d_name, -1, dir->de.d_name,
-	     sizeof(dir->de.d_name), NULL, NULL)) {
-	    logmsg(LOG_CRIT, "win_readdir: WideCharToMultiByte failed");
-	    return NULL;
-	}
-	return &dir->de;
+        if (!WideCharToMultiByte
+                (CP_UTF8, 0, de->d_name, -1, dir->de.d_name,
+                 sizeof(dir->de.d_name), NULL, NULL)) {
+            logmsg(LOG_CRIT, "win_readdir: WideCharToMultiByte failed");
+            return NULL;
+        }
+        return &dir->de;
     }
 }
 
 int win_closedir(UNFS3_WIN_DIR * dir)
 {
     if (dir->stream == NULL) {
-	free(dir);
-	return 0;
+        free(dir);
+        return 0;
     } else {
-	return _wclosedir(dir->stream);
+        return _wclosedir(dir->stream);
     }
 }
 
@@ -719,15 +719,15 @@ int win_mkdir(const char *pathname, U(mode_t mode))
     int ret;
 
     if (!strcmp("/", pathname)) {
-	/* Emulate root */
-	errno = EROFS;
-	return -1;
+        /* Emulate root */
+        errno = EROFS;
+        return -1;
     }
 
     winpath = intpath2winpath(pathname);
     if (!winpath) {
-	errno = EINVAL;
-	return -1;
+        errno = EINVAL;
+        return -1;
     }
 
     /* FIXME: Use mode */
@@ -772,36 +772,36 @@ int win_statvfs(const char *path, backend_statvfsstruct * buf)
     ULARGE_INTEGER TotalNumberOfFreeBytes;
 
     if (!strcmp("/", path)) {
-	/* Emulate root */
-	buf->f_bsize = 1024;
-	buf->f_blocks = 1024;
-	buf->f_bfree = 0;
-	buf->f_bavail = 0;
-	buf->f_files = 1024;
-	buf->f_ffree = 0;
-	return 0;
+        /* Emulate root */
+        buf->f_bsize = 1024;
+        buf->f_blocks = 1024;
+        buf->f_bfree = 0;
+        buf->f_bavail = 0;
+        buf->f_files = 1024;
+        buf->f_ffree = 0;
+        return 0;
     }
 
     winpath = intpath2winpath(path);
     if (!winpath) {
-	errno = EINVAL;
-	return -1;
+        errno = EINVAL;
+        return -1;
     }
 
     winpath[3] = '\0';		       /* Cut off after x:\ */
 
     if (!GetDiskFreeSpaceW
-	(winpath, &SectorsPerCluster, &BytesPerSector, &NumberOfFreeClusters,
-	 &TotalNumberOfClusters)) {
-	errno = EIO;
-	return -1;
+            (winpath, &SectorsPerCluster, &BytesPerSector, &NumberOfFreeClusters,
+             &TotalNumberOfClusters)) {
+        errno = EIO;
+        return -1;
     }
 
     if (!GetDiskFreeSpaceExW
-	(winpath, &FreeBytesAvailable, &TotalNumberOfBytes,
-	 &TotalNumberOfFreeBytes)) {
-	errno = EIO;
-	return -1;
+            (winpath, &FreeBytesAvailable, &TotalNumberOfBytes,
+             &TotalNumberOfFreeBytes)) {
+        errno = EIO;
+        return -1;
     }
 
     buf->f_bsize = BytesPerSector;
@@ -820,15 +820,15 @@ int win_remove(const char *pathname)
     int ret;
 
     if (!strcmp("/", pathname)) {
-	/* Emulate root */
-	errno = EROFS;
-	return -1;
+        /* Emulate root */
+        errno = EROFS;
+        return -1;
     }
 
     winpath = intpath2winpath(pathname);
     if (!winpath) {
-	errno = EINVAL;
-	return -1;
+        errno = EINVAL;
+        return -1;
     }
 
     ret = _wremove(winpath);
@@ -842,15 +842,15 @@ int win_chmod(const char *path, mode_t mode)
     int ret;
 
     if (!strcmp("/", path)) {
-	/* Emulate root */
-	errno = EROFS;
-	return -1;
+        /* Emulate root */
+        errno = EROFS;
+        return -1;
     }
 
     winpath = intpath2winpath(path);
     if (!winpath) {
-	errno = EINVAL;
-	return -1;
+        errno = EINVAL;
+        return -1;
     }
 
     ret = _wchmod(winpath, mode);
@@ -864,7 +864,7 @@ int win_chmod(const char *path, mode_t mode)
    is always set according to times->modtime.
 */
 static int win_utime_creation(const char *path, const struct utimbuf *times,
-			      int creation)
+                              int creation)
 {
     wchar_t *winpath;
     int ret = 0;
@@ -873,15 +873,15 @@ static int win_utime_creation(const char *path, const struct utimbuf *times,
     FILETIME xtime, mtime;
 
     if (!strcmp("/", path)) {
-	/* Emulate root */
-	errno = EROFS;
-	return -1;
+        /* Emulate root */
+        errno = EROFS;
+        return -1;
     }
 
     winpath = intpath2winpath(path);
     if (!winpath) {
-	errno = EINVAL;
-	return -1;
+        errno = EINVAL;
+        return -1;
     }
 
     /* Unfortunately, we cannot use utime(), since it doesn't support
@@ -894,13 +894,13 @@ static int win_utime_creation(const char *path, const struct utimbuf *times,
     mtime.dwLowDateTime = fti.LowPart;
 
     h = CreateFileW(winpath, FILE_WRITE_ATTRIBUTES,
-		    FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING,
-		    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS, NULL);
+                    FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING,
+                    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS, NULL);
 
     if (!SetFileTime
-	(h, creation ? &xtime : NULL, creation ? NULL : &xtime, &mtime)) {
-	errno = EACCES;
-	ret = -1;
+            (h, creation ? &xtime : NULL, creation ? NULL : &xtime, &mtime)) {
+        errno = EACCES;
+        ret = -1;
     }
 
     CloseHandle(h);
@@ -919,15 +919,15 @@ int win_rmdir(const char *path)
     int ret;
 
     if (!strcmp("/", path)) {
-	/* Emulate root */
-	errno = EROFS;
-	return -1;
+        /* Emulate root */
+        errno = EROFS;
+        return -1;
     }
 
     winpath = intpath2winpath(path);
     if (!winpath) {
-	errno = EINVAL;
-	return -1;
+        errno = EINVAL;
+        return -1;
     }
 
     ret = _wrmdir(winpath);
@@ -941,21 +941,21 @@ int win_rename(const char *oldpath, const char *newpath)
     int ret;
 
     if (!strcmp("/", oldpath) && !strcmp("/", newpath)) {
-	/* Emulate root */
-	errno = EROFS;
-	return -1;
+        /* Emulate root */
+        errno = EROFS;
+        return -1;
     }
 
     oldwinpath = intpath2winpath(oldpath);
     if (!oldwinpath) {
-	errno = EINVAL;
-	return -1;
+        errno = EINVAL;
+        return -1;
     }
     newwinpath = intpath2winpath(newpath);
     if (!newwinpath) {
-	free(oldwinpath);
-	errno = EINVAL;
-	return -1;
+        free(oldwinpath);
+        errno = EINVAL;
+        return -1;
     }
 
     ret = _wrename(oldwinpath, newwinpath);
@@ -969,22 +969,22 @@ int win_gen_nonce(char *nonce)
     HCRYPTPROV hCryptProv;
 
     if (!CryptAcquireContext
-	(&hCryptProv, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT)) {
-	logmsg(LOG_ERR, "CryptAcquireContext failed with error 0x%lx",
-	       GetLastError());
-	return -1;
+            (&hCryptProv, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT)) {
+        logmsg(LOG_ERR, "CryptAcquireContext failed with error 0x%lx",
+               GetLastError());
+        return -1;
     }
 
     if (!CryptGenRandom(hCryptProv, 32, nonce)) {
-	logmsg(LOG_ERR, "CryptGenRandom failed with error 0x%lx",
-	       GetLastError());
-	return -1;
+        logmsg(LOG_ERR, "CryptGenRandom failed with error 0x%lx",
+               GetLastError());
+        return -1;
     }
 
     if (!CryptReleaseContext(hCryptProv, 0)) {
-	logmsg(LOG_ERR, "CryptReleaseContext failed with error 0x%lx",
-	       GetLastError());
-	return -1;
+        logmsg(LOG_ERR, "CryptReleaseContext failed with error 0x%lx",
+               GetLastError());
+        return -1;
     }
 
     return 0;
@@ -998,25 +998,25 @@ int win_utf8ncasecmp(const char *s1, const char *s2, size_t n)
 
     /* Make sure input is valid UTF-8 */
     if (!isLegalUTF8String(s1)) {
-	logmsg(LOG_CRIT, "win_utf8ncasecmp: Illegal UTF-8 string:%s", s1);
-	return -1;
+        logmsg(LOG_CRIT, "win_utf8ncasecmp: Illegal UTF-8 string:%s", s1);
+        return -1;
     }
     if (!isLegalUTF8String(s2)) {
-	logmsg(LOG_CRIT, "win_utf8ncasecmp: Illegal UTF-8 string:%s", s2);
-	return -1;
+        logmsg(LOG_CRIT, "win_utf8ncasecmp: Illegal UTF-8 string:%s", s2);
+        return -1;
     }
 
     /* Convert both strings to wide chars */
     converted = MultiByteToWideChar(CP_UTF8, 0, s1, n, ws1, wsizeof(ws1));
     if (!converted) {
-	logmsg(LOG_CRIT, "win_utf8ncasecmp: MultiByteToWideChar failed");
-	return -1;
+        logmsg(LOG_CRIT, "win_utf8ncasecmp: MultiByteToWideChar failed");
+        return -1;
     }
     ws1[converted] = '\0';
     converted = MultiByteToWideChar(CP_UTF8, 0, s2, n, ws2, wsizeof(ws2));
     if (!converted) {
-	logmsg(LOG_CRIT, "win_utf8ncasecmp: MultiByteToWideChar failed");
-	return 1;
+        logmsg(LOG_CRIT, "win_utf8ncasecmp: MultiByteToWideChar failed");
+        return 1;
     }
     ws2[converted] = '\0';
 
@@ -1038,7 +1038,7 @@ static void win_verf_to_ubuf(struct utimbuf *ubuf, createverf3 verf)
     ubuf->actime += FT80SEC;
     ubuf->modtime &= 0x3fffffff;
     ubuf->modtime += FT80SEC;
-    /* While FAT CreationTime has a resolution of 10 ms, WriteTime only has a 
+    /* While FAT CreationTime has a resolution of 10 ms, WriteTime only has a
        resolution of 2 seconds. */
     ubuf->modtime &= ~1;
 }

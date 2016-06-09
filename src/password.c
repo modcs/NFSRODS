@@ -1,7 +1,12 @@
-
-/*
- * UNFS3 mount password support routines
- * (C) 2004, Peter Astrand <astrand@cendio.se>
+/* NFS-RODS: A Tool for Accessing iRODS Repositories
+ * via the NFS Protocol
+ * (C) 2016, Danilo Mendonça, Vandi Alves, Iure Fe,
+ * Aleciano Lobo Junior, Francisco Airton Silva,
+ * Gustavo Callou and Paulo Maciel <prmm@cin.ufpe.br>
+ *
+ * Original Copyright notice
+ * UNFS3 NFS protocol procedures
+ * (C) 2004, Pascal Schmidt
  * see file LICENSE for license details
  */
 
@@ -34,11 +39,11 @@ int gen_nonce(char *nonce)
     int bytes_read, fd;
 
     if (((fd = open("/dev/urandom", O_RDONLY)) != -1)
-	|| ((fd = open("/dev/random", O_RDONLY)) != -1)) {
-	bytes_read = read(fd, nonce, 32);
-	close(fd);
-	if (bytes_read == 32)
-	    return 0;
+            || ((fd = open("/dev/random", O_RDONLY)) != -1)) {
+        bytes_read = read(fd, nonce, 32);
+        close(fd);
+        if (bytes_read == 32)
+            return 0;
     }
 
     /* No /dev/random; do it by hand */
@@ -62,7 +67,7 @@ int gen_nonce(char *nonce)
 static char nibble_as_hexchar(unsigned char c)
 {
     if (c <= 9)
-	return c + '0';
+        return c + '0';
 
     return c - 10 + 'a';
 }
@@ -72,20 +77,20 @@ static void hexify(md5_byte_t digest[16], char hexdigest[32])
     int i, j;
 
     for (i = j = 0; i < 16; i++) {
-	char c;
+        char c;
 
-	/* The first four bits */
-	c = (digest[i] >> 4) & 0xf;
-	hexdigest[j++] = nibble_as_hexchar(c);
-	/* The next four bits */
-	c = (digest[i] & 0xf);
-	hexdigest[j++] = nibble_as_hexchar(c);
+        /* The first four bits */
+        c = (digest[i] >> 4) & 0xf;
+        hexdigest[j++] = nibble_as_hexchar(c);
+        /* The next four bits */
+        c = (digest[i] & 0xf);
+        hexdigest[j++] = nibble_as_hexchar(c);
     }
 }
 
 /* Handle mount commands:
  * Advance dpath to first slash
- * Copy command arguments to arg. 
+ * Copy command arguments to arg.
 */
 void mnt_cmd_argument(char **dpath, const char *cmd, char *arg, size_t maxlen)
 {
@@ -97,7 +102,7 @@ void mnt_cmd_argument(char **dpath, const char *cmd, char *arg, size_t maxlen)
 
     slash = strchr(arg, '/');
     if (slash != NULL)
-	*slash = '\0';
+        *slash = '\0';
 
     *dpath += strlen(arg);
 }

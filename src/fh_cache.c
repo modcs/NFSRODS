@@ -1,7 +1,12 @@
-
-/*
- * UNFS3 filehandle cache
- * (C) 2004
+/* NFS-RODS: A Tool for Accessing iRODS Repositories
+ * via the NFS Protocol
+ * (C) 2016, Danilo Mendonça, Vandi Alves, Iure Fe,
+ * Aleciano Lobo Junior, Francisco Airton Silva,
+ * Gustavo Callou and Paulo Maciel <prmm@cin.ufpe.br>
+ *
+ * Original Copyright notice
+ * UNFS3 NFS protocol procedures
+ * (C) 2004, Pascal Schmidt
  * see file LICENSE for license details
  */
 
@@ -88,22 +93,22 @@ static int fh_cache_lru(void)
 
     /* if cache is not full, we simply hand out the next slot */
     if (fh_cache_max < CACHE_ENTRIES - 1)
-	return fh_cache_max++;
+        return fh_cache_max++;
 
     for (i = 0; i < CACHE_ENTRIES; i++) {
-	if (i == fh_last_entry)
-	    continue;
-	if (fh_cache[i].use == 0)
-	    return i;
-	if (fh_cache[i].use < best) {
-	    best = fh_cache[i].use;
-	    best_idx = i;
-	}
+        if (i == fh_last_entry)
+            continue;
+        if (fh_cache[i].use == 0)
+            return i;
+        if (fh_cache[i].use < best) {
+            best = fh_cache[i].use;
+            best_idx = i;
+        }
     }
 
     /* avoid stomping over last returned entry */
     if (best_idx == 0 && fh_last_entry == 0)
-	best_idx = 1;
+        best_idx = 1;
 
     return best_idx;
 }
@@ -127,10 +132,10 @@ static int fh_cache_index(uint32 dev, uint64 ino)
     int i, res = -1;
 
     for (i = 0; i < fh_cache_max + 1; i++)
-	if (fh_cache[i].dev == dev && fh_cache[i].ino == ino) {
-	    res = i;
-	    break;
-	}
+        if (fh_cache[i].dev == dev && fh_cache[i].ino == ino) {
+            res = i;
+            break;
+        }
 
     return res;
 }
@@ -147,7 +152,7 @@ char *fh_cache_add(uint32 dev, uint64 ino, const char *path)
 
     /* otherwise overwrite least recently used entry */
     if (idx == -1)
-	idx = fh_cache_lru();
+        idx = fh_cache_lru();
 
     fh_cache[idx].dev = dev;
     fh_cache[idx].ino = ino;
@@ -169,30 +174,30 @@ static char *fh_cache_lookup(uint32 dev, uint64 ino)
     i = fh_cache_index(dev, ino);
 
     if (i != -1) {
-	/* check whether path to <dev,ino> relation still holds */
-	res = backend_lstat(fh_cache[i].path, &buf);
-	if (res == -1) {
-	    /* object does not exist any more */
-	    fh_cache_inval(i);
-	    return NULL;
-	}
-	if (buf.st_dev == dev && buf.st_ino == ino) {
-	    /* cache hit, update time on cache entry */
-	    fh_cache[i].use = fh_cache_next();
+        /* check whether path to <dev,ino> relation still holds */
+        res = backend_lstat(fh_cache[i].path, &buf);
+        if (res == -1) {
+            /* object does not exist any more */
+            fh_cache_inval(i);
+            return NULL;
+        }
+        if (buf.st_dev == dev && buf.st_ino == ino) {
+            /* cache hit, update time on cache entry */
+            fh_cache[i].use = fh_cache_next();
 
-	    /* update stat cache */
-	    st_cache_valid = TRUE;
-	    st_cache = buf;
+            /* update stat cache */
+            st_cache_valid = TRUE;
+            st_cache = buf;
 
-	    /* prevent next fh_cache_add from overwriting entry */
-	    fh_last_entry = i;
+            /* prevent next fh_cache_add from overwriting entry */
+            fh_last_entry = i;
 
-	    return fh_cache[i].path;
-	} else {
-	    /* path to <dev,ino> relation has changed */
-	    fh_cache_inval(i);
-	    return NULL;
-	}
+            return fh_cache[i].path;
+        } else {
+            /* path to <dev,ino> relation has changed */
+            fh_cache_inval(i);
+            return NULL;
+        }
     }
 
     return NULL;
@@ -210,82 +215,82 @@ char *fh_decomp(nfs_fh3 fh)
     uint32 *dir_hash, new_dir_hash;
 
     if (!nfh_valid(fh)) {
-	st_cache_valid = FALSE;
-	return NULL;
+        st_cache_valid = FALSE;
+        return NULL;
     }
 
     /* Does the fsid match some static fsid? */
     if ((result =
-	 export_point_from_fsid(obj->dev, &last_mtime, &dir_hash)) != NULL) {
-	if (obj->ino == 0x1) {
-	    /* This FH refers to the export point itself */
-	    /* Need to fill stat cache */
-	    st_cache_valid = TRUE;
+         export_point_from_fsid(obj->dev, &last_mtime, &dir_hash)) != NULL) {
+        if (obj->ino == 0x1) {
+            /* This FH refers to the export point itself */
+            /* Need to fill stat cache */
+            st_cache_valid = TRUE;
 
-        /*if (backend_lstat(result, &st_cache) == -1) {
+            /*if (backend_lstat(result, &st_cache) == -1) {
 
-		st_cache.st_mode = S_IFDIR | S_IRWXU | S_IRWXG | S_IRWXO;
-		st_cache.st_nlink = 2;
-		st_cache.st_uid = 0;
-		st_cache.st_gid = 0;
-		st_cache.st_rdev = 0;
-		st_cache.st_size = 4096;
-		st_cache.st_blksize = 512;
-		st_cache.st_blocks = 8;
-	    } else {
+        st_cache.st_mode = S_IFDIR | S_IRWXU | S_IRWXG | S_IRWXO;
+        st_cache.st_nlink = 2;
+        st_cache.st_uid = 0;
+        st_cache.st_gid = 0;
+        st_cache.st_rdev = 0;
+        st_cache.st_size = 4096;
+        st_cache.st_blksize = 512;
+        st_cache.st_blocks = 8;
+        } else {
         */
-		/* Stat was OK, but make sure the values are sane. Supermount 
-		   returns insane values when no media is inserted, for
-		   example. */
-		if (st_cache.st_nlink == 0)
-		    st_cache.st_nlink = 1;
-		if (st_cache.st_size == 0)
-		    st_cache.st_size = 4096;
-		if (st_cache.st_blksize == 0)
-		    st_cache.st_blksize = 512;
-		if (st_cache.st_blocks == 0)
-		    st_cache.st_blocks = 8;
-       // }
+            /* Stat was OK, but make sure the values are sane. Supermount
+           returns insane values when no media is inserted, for
+           example. */
+            if (st_cache.st_nlink == 0)
+                st_cache.st_nlink = 1;
+            if (st_cache.st_size == 0)
+                st_cache.st_size = 4096;
+            if (st_cache.st_blksize == 0)
+                st_cache.st_blksize = 512;
+            if (st_cache.st_blocks == 0)
+                st_cache.st_blocks = 8;
+            // }
 
-	    st_cache.st_dev = obj->dev;
-	    st_cache.st_ino = 0x1;
+            st_cache.st_dev = obj->dev;
+            st_cache.st_ino = 0x1;
 
-	    /* It's very important that we get mtime correct, since it's used 
-	       as verifier in READDIR. The generation of mtime is tricky,
-	       because with some filesystems, such as the Linux 2.4 FAT fs,
-	       the mtime value for the mount point is set to *zero* on each
-	       mount. I consider this a bug, but we need to work around it
-	       anyway.
+            /* It's very important that we get mtime correct, since it's used
+           as verifier in READDIR. The generation of mtime is tricky,
+           because with some filesystems, such as the Linux 2.4 FAT fs,
+           the mtime value for the mount point is set to *zero* on each
+           mount. I consider this a bug, but we need to work around it
+           anyway.
 
-	       We store the last mtime returned. When stat returns a smaller
-	       value than this, we double-check by doing a hash of the names
-	       in the directory. If this hash is different from what we had
-	       earlier, return current time.
+           We store the last mtime returned. When stat returns a smaller
+           value than this, we double-check by doing a hash of the names
+           in the directory. If this hash is different from what we had
+           earlier, return current time.
 
-	       Note: Since dir_hash is stored in memory, we have introduced a 
-	       little statefulness here. This means that if unfsd is
-	       restarted during two READDIR calls, NFS3ERR_BAD_COOKIE will be 
-	       returned, and the client has to retry the READDIR operation
-	       with a zero cookie */
+           Note: Since dir_hash is stored in memory, we have introduced a
+           little statefulness here. This means that if unfsd is
+           restarted during two READDIR calls, NFS3ERR_BAD_COOKIE will be
+           returned, and the client has to retry the READDIR operation
+           with a zero cookie */
 
-        /*
-	    if (st_cache.st_mtime > *last_mtime) {
+            /*
+        if (st_cache.st_mtime > *last_mtime) {
 
-		*last_mtime = st_cache.st_mtime;
+        *last_mtime = st_cache.st_mtime;
         } else
             if (*dir_hash != (new_dir_hash = directory_hash(result))) {
 
-		st_cache.st_mtime = time(NULL);
-		*last_mtime = st_cache.st_mtime;
-		*dir_hash = new_dir_hash;
-	    } else {
+        st_cache.st_mtime = time(NULL);
+        *last_mtime = st_cache.st_mtime;
+        *dir_hash = new_dir_hash;
+        } else {
 
-		st_cache.st_mtime = *last_mtime;
-	    }
+        st_cache.st_mtime = *last_mtime;
+        }
         */
 
-	    return result;
-	}
+            return result;
+        }
     }
 
     /* try lookup in cache, increase cache usage counter */
@@ -293,22 +298,22 @@ char *fh_decomp(nfs_fh3 fh)
     fh_cache_use++;
 
     if (!result) {
-	/* not found, resolve the hard way */
-	result = fh_decomp_raw(obj);
+        /* not found, resolve the hard way */
+        result = fh_decomp_raw(obj);
 
-	/* if still not found, do full recursive search) */
-	if (!result)
-	    result = backend_locate_file(obj->dev, obj->ino);
+        /* if still not found, do full recursive search) */
+        if (!result)
+            result = backend_locate_file(obj->dev, obj->ino);
 
-	if (result)
-	    /* add to cache for later use if resolution ok */
-	    result = fh_cache_add(obj->dev, obj->ino, result);
-	else
-	    /* could not resolve in any way */
-	    st_cache_valid = FALSE;
+        if (result)
+            /* add to cache for later use if resolution ok */
+            result = fh_cache_add(obj->dev, obj->ino, result);
+        else
+            /* could not resolve in any way */
+            st_cache_valid = FALSE;
     } else
-	/* found, update cache hit statistic */
-	fh_cache_hit++;
+        /* found, update cache hit statistic */
+        fh_cache_hit++;
 
     return result;
 }
@@ -324,8 +329,8 @@ unfs3_fh_t fh_comp(const char *path, struct svc_req * rqstp, int need_dir)
 
     res = fh_comp_raw(path, rqstp, need_dir);
     if (fh_valid(res))
-	/* add to cache for later use */
-	fh_cache_add(res.dev, res.ino, path);
+        /* add to cache for later use */
+        fh_cache_add(res.dev, res.ino, path);
 
     res.pwhash = export_password_hash;
     return res;
@@ -336,13 +341,13 @@ unfs3_fh_t fh_comp(const char *path, struct svc_req * rqstp, int need_dir)
  * wrapper for fh_comp
  */
 unfs3_fh_t *fh_comp_ptr(const char *path, struct svc_req * rqstp,
-			int need_dir)
+                        int need_dir)
 {
     static unfs3_fh_t res;
 
     res = fh_comp(path, rqstp, need_dir);
     if (fh_valid(res))
-	return &res;
+        return &res;
     else
-	return NULL;
+        return NULL;
 }

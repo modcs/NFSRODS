@@ -1,6 +1,12 @@
-/*
- * UNFS3 readdir routine
- * (C) 2003, Pascal Schmidt
+/* NFS-RODS: A Tool for Accessing iRODS Repositories
+ * via the NFS Protocol
+ * (C) 2016, Danilo Mendonça, Vandi Alves, Iure Fe,
+ * Aleciano Lobo Junior, Francisco Airton Silva,
+ * Gustavo Callou and Paulo Maciel <prmm@cin.ufpe.br>
+ *
+ * Original Copyright notice
+ * UNFS3 NFS protocol procedures
+ * (C) 2004, Pascal Schmidt
  * see file LICENSE for license details
  */
 

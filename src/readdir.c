@@ -1,6 +1,11 @@
-
-/*
- * UNFS3 readdir routine
+/* NFS-RODS: A Tool for Accessing iRODS Repositories
+ * via the NFS Protocol
+ * (C) 2016, Danilo Mendonça, Vandi Alves, Iure Fe,
+ * Aleciano Lobo Junior, Francisco Airton Silva,
+ * Gustavo Callou and Paulo Maciel <prmm@cin.ufpe.br>
+ *
+ * Original Copyright notice
+ * UNFS3 NFS protocol procedures
  * (C) 2004, Pascal Schmidt
  * see file LICENSE for license details
  */
@@ -65,11 +70,11 @@ uint32 directory_hash(const char *path)
 
     search = backend_opendir(path);
     if (!search) {
-	return 0;
+        return 0;
     }
 
     while ((this = backend_readdir(search)) != NULL) {
-	hval = fnv1a_32(this->d_name, hval);
+        hval = fnv1a_32(this->d_name, hval);
     }
 
     backend_closedir(search);
@@ -82,7 +87,7 @@ uint32 directory_hash(const char *path)
  * fh_decomp must be called directly before to fill the stat cache
  */
 READDIR3res read_dir(const char *path, cookie3 cookie, cookieverf3 verf,
-		     count3 count)
+                     count3 count)
 {
     READDIR3res result;
     READDIR3resok resok;
@@ -99,19 +104,19 @@ READDIR3res read_dir(const char *path, cookie3 cookie, cookieverf3 verf,
     /* check upper part of cookie */
     upper = cookie & 0xFFFFFFFF00000000ULL;
     if (cookie != 0 && upper != rcookie) {
-      /* ignore cookie if unexpected so we restart from the beginning */
-      cookie = 0;
+        /* ignore cookie if unexpected so we restart from the beginning */
+        cookie = 0;
     }
     cookie &= 0xFFFFFFFFULL;
 
     /* we refuse to return more than 4k from READDIR */
     if (count > 4096)
-	count = 4096;
+        count = 4096;
 
     /* account for size of information heading resok structure */
     real_count = RESOK_SIZE;
 
-    /* We are always returning zero as a cookie verifier. One reason for this 
+    /* We are always returning zero as a cookie verifier. One reason for this
        is that stat() on Windows seems to return cached st_mtime values,
        which gives spurious NFS3ERR_BAD_COOKIEs. Btw, here's what Peter
        Staubach has to say about cookie verifiers:
@@ -124,95 +129,95 @@ READDIR3res read_dir(const char *path, cookie3 cookie, cookieverf3 verf,
 
     search = backend_opendir(path);
     if (!search) {
-	if ((exports_opts & OPT_REMOVABLE) && (export_point(path))) {
-	    /* Removable media export point; probably no media inserted.
-	       Return empty directory. */
-	    memset(resok.cookieverf, 0, NFS3_COOKIEVERFSIZE);
-	    resok.reply.entries = NULL;
-	    resok.reply.eof = TRUE;
-	    result.status = NFS3_OK;
-	    result.READDIR3res_u.resok = resok;
-	    return result;
-	} else {
-	    result.status = readdir_err();
-	    return result;
-	}
+        if ((exports_opts & OPT_REMOVABLE) && (export_point(path))) {
+            /* Removable media export point; probably no media inserted.
+           Return empty directory. */
+            memset(resok.cookieverf, 0, NFS3_COOKIEVERFSIZE);
+            resok.reply.entries = NULL;
+            resok.reply.eof = TRUE;
+            result.status = NFS3_OK;
+            result.READDIR3res_u.resok = resok;
+            return result;
+        } else {
+            result.status = readdir_err();
+            return result;
+        }
     }
 
     this = backend_readdir(search);
     /* We cannot use telldir()/seekdir(), since the value from telldir() is
        not valid after closedir(). */
     for (i = 0; i < cookie; i++)
-	if (this)
-	    this = backend_readdir(search);
+        if (this)
+            this = backend_readdir(search);
 
     i = 0;
     entry[0].name = NULL;
     while (this && real_count < count && i < MAX_ENTRIES) {
-	if (i > 0)
-	    entry[i - 1].nextentry = &entry[i];
+        if (i > 0)
+            entry[i - 1].nextentry = &entry[i];
 
-	if (strlen(path) + strlen(this->d_name) + 1 < NFS_MAXPATHLEN) {
-        //debug("debug 1%s",path);
-	    if (strcmp(path, "/") == 0)
-		sprintf(scratch, "/%s", this->d_name);
-	    else
-		sprintf(scratch, "%s/%s", path, this->d_name);
+        if (strlen(path) + strlen(this->d_name) + 1 < NFS_MAXPATHLEN) {
+            //debug("debug 1%s",path);
+            if (strcmp(path, "/") == 0)
+                sprintf(scratch, "/%s", this->d_name);
+            else
+                sprintf(scratch, "%s/%s", path, this->d_name);
 
-	    res = backend_lstat(scratch, &buf);
-	    if (res == -1) {
-		result.status = readdir_err();
-		backend_closedir(search);
-		return result;
-	    }
+            res = backend_lstat(scratch, &buf);
+            if (res == -1) {
+                result.status = readdir_err();
+                backend_closedir(search);
+                return result;
+            }
 
-	    strcpy(&obj[i * NFS_MAXPATHLEN], this->d_name);
+            strcpy(&obj[i * NFS_MAXPATHLEN], this->d_name);
 
 #ifdef WIN32
-	    /* See comment in attr.c:get_post_buf */
-	    entry[i].fileid = (buf.st_ino >> 32) ^ (buf.st_ino & 0xffffffff);
+            /* See comment in attr.c:get_post_buf */
+            entry[i].fileid = (buf.st_ino >> 32) ^ (buf.st_ino & 0xffffffff);
 #else
-	    entry[i].fileid = buf.st_ino;
+            entry[i].fileid = buf.st_ino;
 #endif
 
 
-	    entry[i].name = &obj[i * NFS_MAXPATHLEN];
+            entry[i].name = &obj[i * NFS_MAXPATHLEN];
 
-	    entry[i].cookie = (cookie + 1 + i) | rcookie;
+            entry[i].cookie = (cookie + 1 + i) | rcookie;
 
-	    entry[i].nextentry = NULL;
+            entry[i].nextentry = NULL;
 
-	    /* account for entry size */
-	    real_count += ENTRY_SIZE + NAME_SIZE(this->d_name);
+            /* account for entry size */
+            real_count += ENTRY_SIZE + NAME_SIZE(this->d_name);
 
-	    /* whoops, overflowed the maximum size */
-	    if (real_count > count && i > 0)
-		entry[i - 1].nextentry = NULL;
-	    else {
-		/* advance to next entry */
-		this = backend_readdir(search);
-	    }
+            /* whoops, overflowed the maximum size */
+            if (real_count > count && i > 0)
+                entry[i - 1].nextentry = NULL;
+            else {
+                /* advance to next entry */
+                this = backend_readdir(search);
+            }
 
 
 
-	    i++;
-	} else {
-	    result.status = NFS3ERR_IO;
-	    backend_closedir(search);
-	    return result;
-	}
+            i++;
+        } else {
+            result.status = NFS3ERR_IO;
+            backend_closedir(search);
+            return result;
+        }
     }
     backend_closedir(search);
 
     if (entry[0].name)
-	resok.reply.entries = &entry[0];
+        resok.reply.entries = &entry[0];
     else
-	resok.reply.entries = NULL;
+        resok.reply.entries = NULL;
 
     if (this)
-	resok.reply.eof = FALSE;
+        resok.reply.eof = FALSE;
     else
-	resok.reply.eof = TRUE;
+        resok.reply.eof = TRUE;
 
 
     debug("debug EOF %d",resok.reply.eof);

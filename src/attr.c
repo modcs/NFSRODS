@@ -1,6 +1,11 @@
-
-/*
- * UNFS3 attribute handling
+/* NFS-RODS: A Tool for Accessing iRODS Repositories
+ * via the NFS Protocol
+ * (C) 2016, Danilo Mendonça, Vandi Alves, Iure Fe,
+ * Aleciano Lobo Junior, Francisco Airton Silva,
+ * Gustavo Callou and Paulo Maciel <prmm@cin.ufpe.br>
+ *
+ * Original Copyright notice
+ * UNFS3 NFS protocol procedures
  * (C) 2004, Pascal Schmidt
  * see file LICENSE for license details
  */
@@ -37,11 +42,11 @@
 nfsstat3 is_reg(void)
 {
     if (!st_cache_valid)
-	return NFS3ERR_STALE;
+        return NFS3ERR_STALE;
     else if (S_ISREG(st_cache.st_mode))
-	return NFS3_OK;
+        return NFS3_OK;
     else
-	return NFS3ERR_INVAL;
+        return NFS3ERR_INVAL;
 }
 
 /*
@@ -50,20 +55,20 @@ nfsstat3 is_reg(void)
 mode_t type_to_mode(ftype3 ftype)
 {
     switch (ftype) {
-	case NF3REG:
-	    return S_IFREG;
-	case NF3DIR:
-	    return S_IFDIR;
-	case NF3LNK:
-	    return S_IFLNK;
-	case NF3CHR:
-	    return S_IFCHR;
-	case NF3BLK:
-	    return S_IFBLK;
-	case NF3FIFO:
-	    return S_IFIFO;
-	case NF3SOCK:
-	    return S_IFSOCK;
+    case NF3REG:
+        return S_IFREG;
+    case NF3DIR:
+        return S_IFDIR;
+    case NF3LNK:
+        return S_IFLNK;
+    case NF3CHR:
+        return S_IFCHR;
+    case NF3BLK:
+        return S_IFBLK;
+    case NF3FIFO:
+        return S_IFIFO;
+    case NF3SOCK:
+        return S_IFSOCK;
     }
 
     /* fix gcc warning */
@@ -89,8 +94,8 @@ pre_op_attr get_pre_cached(void)
     pre_op_attr result;
 
     if (!st_cache_valid) {
-	result.attributes_follow = FALSE;
-	return result;
+        result.attributes_follow = FALSE;
+        return result;
     }
 
     result.attributes_follow = TRUE;
@@ -104,10 +109,6 @@ pre_op_attr get_pre_cached(void)
     return result;
 }
 
-
-
-
-
 /*
  * compute post-operation attributes given a stat buffer
  */
@@ -119,72 +120,68 @@ post_op_attr get_post_buf(backend_statstruct buf, struct svc_req * req)
     result.attributes_follow = TRUE;
 
     if (S_ISDIR(buf.st_mode))
-	result.post_op_attr_u.attributes.type = NF3DIR;
+        result.post_op_attr_u.attributes.type = NF3DIR;
     else if (S_ISBLK(buf.st_mode))
-	result.post_op_attr_u.attributes.type = NF3BLK;
+        result.post_op_attr_u.attributes.type = NF3BLK;
     else if (S_ISCHR(buf.st_mode))
-	result.post_op_attr_u.attributes.type = NF3CHR;
+        result.post_op_attr_u.attributes.type = NF3CHR;
 #ifdef S_ISLNK
     else if (S_ISLNK(buf.st_mode))
-	result.post_op_attr_u.attributes.type = NF3LNK;
+        result.post_op_attr_u.attributes.type = NF3LNK;
 #endif				       /* S_ISLNK */
 #ifdef S_ISSOCK
     else if (S_ISSOCK(buf.st_mode))
-	result.post_op_attr_u.attributes.type = NF3SOCK;
+        result.post_op_attr_u.attributes.type = NF3SOCK;
 #endif				       /* S_ISSOCK */
     else if (S_ISFIFO(buf.st_mode))
-	result.post_op_attr_u.attributes.type = NF3FIFO;
+        result.post_op_attr_u.attributes.type = NF3FIFO;
     else
-	result.post_op_attr_u.attributes.type = NF3REG;
+        result.post_op_attr_u.attributes.type = NF3REG;
 
     /* adapt permissions for executable files */
     if (opt_readable_executables && S_ISREG(buf.st_mode)) {
-	if (buf.st_mode & S_IXUSR)
-	    buf.st_mode |= S_IRUSR;
-	if (buf.st_mode & S_IXGRP)
-	    buf.st_mode |= S_IRGRP;
-	if (buf.st_mode & S_IXOTH)
-	    buf.st_mode |= S_IROTH;
+        if (buf.st_mode & S_IXUSR)
+            buf.st_mode |= S_IRUSR;
+        if (buf.st_mode & S_IXGRP)
+            buf.st_mode |= S_IRGRP;
+        if (buf.st_mode & S_IXOTH)
+            buf.st_mode |= S_IROTH;
     }
 
     result.post_op_attr_u.attributes.mode = buf.st_mode & 0xFFFF;
     result.post_op_attr_u.attributes.nlink = buf.st_nlink;
 
-
-
-
-
     /* If -s, translate uids */
     if (opt_singleuser) {
-	unsigned int req_uid = 0;
-	unsigned int req_gid = 0;
-	struct authunix_parms *auth = (void *) req->rq_clntcred;
-	uid_t ruid = backend_getuid();
+        unsigned int req_uid = 0;
+        unsigned int req_gid = 0;
+        struct authunix_parms *auth = (void *) req->rq_clntcred;
+        uid_t ruid = backend_getuid();
 
-	if (req->rq_cred.oa_flavor == AUTH_UNIX) {
-	    req_uid = auth->aup_uid;
-	    req_gid = auth->aup_gid;
-	}
+        if (req->rq_cred.oa_flavor == AUTH_UNIX) {
+            req_uid = auth->aup_uid;
+            req_gid = auth->aup_gid;
+        }
 
-	if ((buf.st_uid == ruid) || (ruid == 0))
-	    result.post_op_attr_u.attributes.uid = req_uid;
-	else
-	    result.post_op_attr_u.attributes.uid = 0;
+        if ((buf.st_uid == ruid) || (ruid == 0))
+            result.post_op_attr_u.attributes.uid = req_uid;
+        else
+            result.post_op_attr_u.attributes.uid = 0;
 
-	if ((buf.st_gid == backend_getgid()) || (ruid == 0))
-	    result.post_op_attr_u.attributes.gid = req_gid;
-	else
-	    result.post_op_attr_u.attributes.gid = 0;
+        if ((buf.st_gid == backend_getgid()) || (ruid == 0))
+            result.post_op_attr_u.attributes.gid = req_gid;
+        else
+            result.post_op_attr_u.attributes.gid = 0;
     } else {
-	/* Normal case */
-	result.post_op_attr_u.attributes.uid = buf.st_uid;
-	result.post_op_attr_u.attributes.gid = buf.st_gid;
+        /* Normal case */
+        result.post_op_attr_u.attributes.uid = buf.st_uid;
+        result.post_op_attr_u.attributes.gid = buf.st_gid;
     }
 
     result.post_op_attr_u.attributes.size = buf.st_size;
     result.post_op_attr_u.attributes.used = buf.st_blocks * 512;
     result.post_op_attr_u.attributes.rdev.specdata1 =
-	(buf.st_rdev >> 8) & 0xFF;
+            (buf.st_rdev >> 8) & 0xFF;
     result.post_op_attr_u.attributes.rdev.specdata2 = buf.st_rdev & 0xFF;
     result.post_op_attr_u.attributes.fsid = buf.st_dev;
 
@@ -192,12 +189,12 @@ post_op_attr get_post_buf(backend_statstruct buf, struct svc_req * req)
        for all objects which resides in the same file system as the exported
        directory */
     if (exports_opts & OPT_REMOVABLE) {
-	backend_statstruct epbuf;
+        backend_statstruct epbuf;
 
-	if (backend_lstat(export_path, &epbuf) != -1 &&
-	    buf.st_dev == epbuf.st_dev) {
-	    result.post_op_attr_u.attributes.fsid = export_fsid;
-	}
+        if (backend_lstat(export_path, &epbuf) != -1 &&
+                buf.st_dev == epbuf.st_dev) {
+            result.post_op_attr_u.attributes.fsid = export_fsid;
+        }
     }
 #ifdef WIN32
     /* Recent Linux kernels (2.6.24 and newer) exposes large fileids even to
@@ -206,7 +203,7 @@ post_op_attr get_post_buf(backend_statstruct buf, struct svc_req * req)
        EOVERFLOW. On Windows, we always have large st_ino:s. To avoid
        trouble, we truncate to 32 bits */
     result.post_op_attr_u.attributes.fileid =
-	(buf.st_ino >> 32) ^ (buf.st_ino & 0xffffffff);
+            (buf.st_ino >> 32) ^ (buf.st_ino & 0xffffffff);
 #else
     result.post_op_attr_u.attributes.fileid = buf.st_ino;
 #endif
@@ -226,21 +223,21 @@ post_op_attr get_post_buf(backend_statstruct buf, struct svc_req * req)
  * lowlevel routine for getting post-operation attributes
  */
 static post_op_attr get_post_ll(const char *path, uint32 dev, uint64 ino,
-				struct svc_req *req)
+                                struct svc_req *req)
 {
     backend_statstruct buf;
     int res;
 
     if (!path)
-	return error_attr;
+        return error_attr;
 
     res = backend_lstat(path, &buf);
     if (res == -1)
-	return error_attr;
+        return error_attr;
 
     /* protect against local fs race */
     if (dev != buf.st_dev || ino != buf.st_ino)
-	return error_attr;
+        return error_attr;
 
     return get_post_buf(buf, req);
 }
@@ -249,7 +246,7 @@ static post_op_attr get_post_ll(const char *path, uint32 dev, uint64 ino,
  * return post-operation attributes, using fh for old dev/ino
  */
 post_op_attr get_post_attr(const char *path, nfs_fh3 nfh,
-			   struct svc_req * req)
+                           struct svc_req * req)
 {
     unfs3_fh_t *fh = (void *) nfh.data.data_val;
 
@@ -272,7 +269,7 @@ post_op_attr get_post_stat(const char *path, struct svc_req * req)
 post_op_attr get_post_cached(struct svc_req * req)
 {
     if (!st_cache_valid)
-	return error_attr;
+        return error_attr;
 
     return get_post_buf(st_cache, req);
 }
@@ -291,28 +288,28 @@ static nfsstat3 set_time(const char *path, backend_statstruct buf, sattr3 new)
     /* set atime and mtime */
     if (new.atime.set_it != DONT_CHANGE || new.mtime.set_it != DONT_CHANGE) {
 
-	/* compute atime to set */
-	if (new.atime.set_it == SET_TO_SERVER_TIME)
-	    new_atime = time(NULL);
-	else if (new.atime.set_it == SET_TO_CLIENT_TIME)
-	    new_atime = new.atime.set_atime_u.atime.seconds;
-	else			       /* DONT_CHANGE */
-	    new_atime = buf.st_atime;
+        /* compute atime to set */
+        if (new.atime.set_it == SET_TO_SERVER_TIME)
+            new_atime = time(NULL);
+        else if (new.atime.set_it == SET_TO_CLIENT_TIME)
+            new_atime = new.atime.set_atime_u.atime.seconds;
+        else			       /* DONT_CHANGE */
+            new_atime = buf.st_atime;
 
-	/* compute mtime to set */
-	if (new.mtime.set_it == SET_TO_SERVER_TIME)
-	    new_mtime = time(NULL);
-	else if (new.mtime.set_it == SET_TO_CLIENT_TIME)
-	    new_mtime = new.mtime.set_mtime_u.mtime.seconds;
-	else			       /* DONT_CHANGE */
-	    new_mtime = buf.st_mtime;
+        /* compute mtime to set */
+        if (new.mtime.set_it == SET_TO_SERVER_TIME)
+            new_mtime = time(NULL);
+        else if (new.mtime.set_it == SET_TO_CLIENT_TIME)
+            new_mtime = new.mtime.set_mtime_u.mtime.seconds;
+        else			       /* DONT_CHANGE */
+            new_mtime = buf.st_mtime;
 
-	utim.actime = new_atime;
-	utim.modtime = new_mtime;
+        utim.actime = new_atime;
+        utim.modtime = new_mtime;
 
-	res = backend_utime(path, &utim);
-	if (res == -1)
-	    return setattr_err();
+        res = backend_utime(path, &utim);
+        if (res == -1)
+            return setattr_err();
     }
 
     return NFS3_OK;
@@ -331,43 +328,43 @@ static nfsstat3 set_attr_unsafe(const char *path, nfs_fh3 nfh, sattr3 new)
 
     res = backend_lstat(path, &buf);
     if (res != 0)
-	return NFS3ERR_STALE;
+        return NFS3ERR_STALE;
 
     /* check local fs race */
     if (buf.st_dev != fh->dev || buf.st_ino != fh->ino)
-	return NFS3ERR_STALE;
+        return NFS3ERR_STALE;
 
     /* set file size */
     if (new.size.set_it == TRUE) {
-	res = backend_truncate(path, new.size.set_size3_u.size);
-	if (res == -1)
-	    return setattr_err();
+        res = backend_truncate(path, new.size.set_size3_u.size);
+        if (res == -1)
+            return setattr_err();
     }
 
     /* set uid and gid */
     if (new.uid.set_it == TRUE || new.gid.set_it == TRUE) {
-	if (new.uid.set_it == TRUE)
-	    new_uid = new.uid.set_uid3_u.uid;
-	else
-	    new_uid = -1;
-	if (new_uid == buf.st_uid)
-	    new_uid = -1;
+        if (new.uid.set_it == TRUE)
+            new_uid = new.uid.set_uid3_u.uid;
+        else
+            new_uid = -1;
+        if (new_uid == buf.st_uid)
+            new_uid = -1;
 
-	if (new.gid.set_it == TRUE)
-	    new_gid = new.gid.set_gid3_u.gid;
-	else
-	    new_gid = -1;
+        if (new.gid.set_it == TRUE)
+            new_gid = new.gid.set_gid3_u.gid;
+        else
+            new_gid = -1;
 
-	res = backend_lchown(path, new_uid, new_gid);
-	if (res == -1)
-	    return setattr_err();
+        res = backend_lchown(path, new_uid, new_gid);
+        if (res == -1)
+            return setattr_err();
     }
 
     /* set mode */
     if (new.mode.set_it == TRUE) {
-	res = backend_chmod(path, new.mode.set_mode3_u.mode);
-	if (res == -1)
-	    return setattr_err();
+        res = backend_chmod(path, new.mode.set_mode3_u.mode);
+        if (res == -1)
+            return setattr_err();
     }
 
     return set_time(path, buf, new);
@@ -386,90 +383,90 @@ nfsstat3 set_attr(const char *path, nfs_fh3 nfh, sattr3 new)
 
     res = backend_lstat(path, &buf);
     if (res != 0)
-	return NFS3ERR_STALE;
+        return NFS3ERR_STALE;
 
-    /* 
+    /*
      * don't open(2) device nodes, it could trigger
      * module loading on the server
      */
     if (S_ISBLK(buf.st_mode) || S_ISCHR(buf.st_mode))
-	return set_attr_unsafe(path, nfh, new);
+        return set_attr_unsafe(path, nfh, new);
 
 #ifdef S_ISLNK
-    /* 
+    /*
      * opening a symlink would open the underlying file,
      * don't try to do that
      */
     if (S_ISLNK(buf.st_mode))
-	return set_attr_unsafe(path, nfh, new);
+        return set_attr_unsafe(path, nfh, new);
 #endif
 
-    /* 
+    /*
      * open object for atomic setting of attributes
      */
     fd = backend_open(path, O_WRONLY | O_NONBLOCK);
     if (fd == -1)
-	fd = backend_open(path, O_RDONLY | O_NONBLOCK);
+        fd = backend_open(path, O_RDONLY | O_NONBLOCK);
 
     if (fd == -1)
-	return set_attr_unsafe(path, nfh, new);
+        return set_attr_unsafe(path, nfh, new);
 
     res = backend_fstat(fd, &buf);
     if (res == -1) {
-	backend_close(fd);
-	return NFS3ERR_STALE;
+        backend_close(fd);
+        return NFS3ERR_STALE;
     }
 
     /* check local fs race */
     if (fh->dev != buf.st_dev || fh->ino != buf.st_ino ||
-	fh->gen != backend_get_gen(buf, fd, path)) {
-	backend_close(fd);
-	return NFS3ERR_STALE;
+            fh->gen != backend_get_gen(buf, fd, path)) {
+        backend_close(fd);
+        return NFS3ERR_STALE;
     }
 
     /* set file size */
     if (new.size.set_it == TRUE) {
-	res = backend_ftruncate(fd, new.size.set_size3_u.size);
-	if (res == -1) {
-	    backend_close(fd);
-	    return setattr_err();
-	}
+        res = backend_ftruncate(fd, new.size.set_size3_u.size);
+        if (res == -1) {
+            backend_close(fd);
+            return setattr_err();
+        }
     }
 
     /* set uid and gid */
     if (new.uid.set_it == TRUE || new.gid.set_it == TRUE) {
-	if (new.uid.set_it == TRUE)
-	    new_uid = new.uid.set_uid3_u.uid;
-	else
-	    new_uid = -1;
-	if (new_uid == buf.st_uid)
-	    new_uid = -1;
+        if (new.uid.set_it == TRUE)
+            new_uid = new.uid.set_uid3_u.uid;
+        else
+            new_uid = -1;
+        if (new_uid == buf.st_uid)
+            new_uid = -1;
 
-	if (new.gid.set_it == TRUE)
-	    new_gid = new.gid.set_gid3_u.gid;
-	else
-	    new_gid = -1;
+        if (new.gid.set_it == TRUE)
+            new_gid = new.gid.set_gid3_u.gid;
+        else
+            new_gid = -1;
 
-	res = backend_fchown(fd, new_uid, new_gid);
-	if (res == -1) {
-	    backend_close(fd);
-	    return setattr_err();
-	}
+        res = backend_fchown(fd, new_uid, new_gid);
+        if (res == -1) {
+            backend_close(fd);
+            return setattr_err();
+        }
     }
 
     /* set mode */
     if (new.mode.set_it == TRUE) {
-	res = backend_fchmod(fd, new.mode.set_mode3_u.mode);
-	if (res == -1) {
-	    backend_close(fd);
-	    return setattr_err();
-	}
+        res = backend_fchmod(fd, new.mode.set_mode3_u.mode);
+        if (res == -1) {
+            backend_close(fd);
+            return setattr_err();
+        }
     }
 
     res = backend_close(fd);
     if (res == -1) {
-	/* error on close probably means attributes didn't make it */
-	return NFS3ERR_IO;
+        /* error on close probably means attributes didn't make it */
+        return NFS3ERR_IO;
     }
 
     /* finally, set times */
@@ -483,10 +480,10 @@ nfsstat3 set_attr(const char *path, nfs_fh3 nfh, sattr3 new)
 mode_t create_mode(sattr3 new)
 {
     if (new.mode.set_it == TRUE)
-	return new.mode.set_mode3_u.mode;
+        return new.mode.set_mode3_u.mode;
     else
-	return S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP |
-	    S_IROTH | S_IXOTH;
+        return S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP |
+                S_IROTH | S_IXOTH;
 }
 
 /*
@@ -498,24 +495,24 @@ nfsstat3 atomic_attr(sattr3 attr)
     gid_t used_gid = mangle_gid(attr.gid.set_gid3_u.gid);
 
     if ((attr.uid.set_it == TRUE && used_uid != backend_geteuid()) ||
-	(attr.gid.set_it == TRUE && used_gid != backend_getegid()) ||
-	(attr.size.set_it == TRUE && attr.size.set_size3_u.size != 0) ||
-	attr.atime.set_it == SET_TO_CLIENT_TIME ||
-	attr.mtime.set_it == SET_TO_CLIENT_TIME)
-	return NFS3ERR_INVAL;
+            (attr.gid.set_it == TRUE && used_gid != backend_getegid()) ||
+            (attr.size.set_it == TRUE && attr.size.set_size3_u.size != 0) ||
+            attr.atime.set_it == SET_TO_CLIENT_TIME ||
+            attr.mtime.set_it == SET_TO_CLIENT_TIME)
+        return NFS3ERR_INVAL;
     else
-	return NFS3_OK;
+        return NFS3_OK;
 }
 
 int fileNameLastIndex(char* path){
     int i=0;
     for(i=strlen(path);i>0;i--)
     {
-            if(path[i]=='/'){
-                return i;
-            }
+        if(path[i]=='/'){
+            return i;
+        }
     }
-   return 0;
+    return 0;
 }
 
 
@@ -523,40 +520,18 @@ nfsstat3 set_attr_irods(char *path, int uidProxy, nfs_fh3 nfh, sattr3 news,char 
 {
 
     int res;
-
     /* set file size */
     if (news.size.set_it == TRUE) {
-
         return setattr_err();
-
     }
 
     /* do not change users and groups*/
     if (news.uid.set_it == TRUE || news.gid.set_it == TRUE) {
-
         return setattr_err();
-
     }
 
     /* set mode */
     if (news.mode.set_it == TRUE) {
-
-
-        //char* userName=malloc (300 *(sizeof (char)));
-
-        //int resultLdap = getLdapName(uidProxy,userName);
-
-       // if(resultLdap<0){
-       //     debug("CREATE - Cant Connect to LDAP", "");
-       //     exit(0);
-       // }
-
-        //rcComm_t* comm = rodsConnectProxy(userName,"tempZone");
-
-
-
-        //rcComm_t* comm = rodsConnect();
-        //rodsLogin(conn);
         char * mode = "null";
         int status =  permission(news.mode.set_mode3_u.mode);
         if(status==1)
@@ -566,9 +541,9 @@ nfsstat3 set_attr_irods(char *path, int uidProxy, nfs_fh3 nfh, sattr3 news,char 
         else if(status==3)
             mode="own";
         res = changeAttr(path,owner,mode,conn);
-    if (res == -1) {
-        return setattr_err();
-    }
+        if (res == -1) {
+            return setattr_err();
+        }
     }
 
     return NFS3_OK;
@@ -587,12 +562,12 @@ int permission(int value){
         p[i]=temp*8;
         value = (int)value/8;
         if(p[i]==2 ||p[i]==3){
-           return 2;
+            return 2;
         }else if(p[i]==5 ||p[i]==4||p[i]==1){
-           status = 1;
+            status = 1;
         }else if( p[i]==6|| p[i]==7){
             status = 3;
-         }
+        }
     }
 
     return status;
